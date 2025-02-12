@@ -24,16 +24,19 @@ class ResNetASPPClassifier(nn.Module):
 
         self.annotations_file = self.config["IndexFile"]
         self.img_dir = self.config["ImageDir"]
-
+            
         model_config = self.config["model"]
         self.num_classes = model_config["NumClasses"]
         self.num_epochs = model_config["NumEpochs"]
         self.batch_size = model_config["BatchSize"]
-        self.learning_rate = model_config["LearningRate"]
         self.model_verbose = model_config["Verbose"]
         self.random_seed = model_config["RandomSeed"]
         self.validation_split = model_config["ValidationSplit"]
-        self.criterion = nn.CrossEntropyLoss()  # todo: add config setting for loss function
+
+        if model_config["LossFunction"] == "cross-entropy":
+            self.criterion = nn.CrossEntropyLoss()
+        else:
+            raise TypeError(f"Invalid Loss Function: {model_config["LossFunction"]}")
 
         # Choose ResNet model
         if self.config["ResNetModel"] == 18:
@@ -43,7 +46,11 @@ class ResNetASPPClassifier(nn.Module):
         else:
             raise TypeError("Invalid ResNet Configuration, must be 18 or 101")
         
-        self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
+        if self.config["UseCachedModel"]:
+            self.model = torch.load(self.config["ModelFilepath"], weights_only=False)
+            print(f"Using cached model at {self.config["ModelFilepath"]}")
+        else:
+            self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
         self.feature_extractor = nn.Sequential(*list(self.model.children())[:-2])  # Keep only backbone
         
         # ASPP settings
@@ -62,8 +69,16 @@ class ResNetASPPClassifier(nn.Module):
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(self.aspp_out_channels, self.num_classes)
 
-        # todo: add config option for optimizer choice
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, weight_decay = 0.001, momentum = 0.9)  
+        optim_config = model_config["optimizer"]
+        if optim_config["OptimizerName"] == "sgd":
+            self.optimizer = torch.optim.SGD(
+                self.model.parameters(), 
+                lr=optim_config["SGDLearningRate"], 
+                weight_decay = optim_config["SGDWeightDecay"], 
+                momentum = optim_config["SGDMomentum"]
+            )  
+        else:
+            raise TypeError(f"Invalid Optimizer: {optim_config["OptimizerName"]}")
         
     def forward(self, x):
         x = self.feature_extractor(x)
@@ -169,3 +184,9 @@ class ResNetASPPClassifier(nn.Module):
                 del images, labels, outputs
 
             print('Accuracy of the network on the {} validation images: {} %'.format(5000, 100 * correct / total))
+
+        if self.config["SaveModel"]:
+            self.save()
+
+    def save(self):
+        torch.save(self.model, self.config["ModelFilepath"])

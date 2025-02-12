@@ -23,7 +23,6 @@ def preprocess(config):
         cropper.begin_cropping()
 
 def train(config):
-    # todo: implement UseCachedModel and model saving
     if config["DoTraining"]:
         classifier = ResNetASPPClassifier(config)
         classifier.load_data()
@@ -35,14 +34,18 @@ def train(config):
             labels = labels.to(classifier.device).long()
 
             if batch_idx == 0:
-                # Debug: Check label dtype
+                # Debug: Check label dtypes
                 print(f"✅ Label dtype: {labels.dtype}")
 
-        classifier.train()
+        # Loading cached model is for eval purposes, not for retraining
+        if not config["UseCachedModel"]:
+            classifier.train()
 
 def full_train(config):
     preprocess(config["preprocessing"])
     train(config["training"])
+
+    print("Done")
 
 def main():
     with open("config.toml", "rb") as f:
