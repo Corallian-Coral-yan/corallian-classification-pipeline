@@ -18,7 +18,8 @@ def preprocess(config):
         cropper = ImageCropper(
             config["OutputRoot"],
             config["BaseInputDir"],
-            dirs=config["Dirs"]
+            dirs=config["Dirs"],
+            recurse=config["InputRecurse"]
         )
         cropper.begin_cropping()
 
