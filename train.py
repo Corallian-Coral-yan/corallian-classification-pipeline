@@ -1,7 +1,7 @@
 import os
 import tomllib
 
-from modules.model.classifier import ResNetClassifier
+from modules.model.classifier import ResNetASPPClassifier
 from modules.preprocessing.image_cropper import ImageCropper
 
 # Preprocessing pipeline
@@ -24,9 +24,20 @@ def preprocess(config):
 
 def train(config):
     # todo: implement UseCachedModel and model saving
-    if (config["DoTraining"]):
-        classifier = ResNetClassifier(config)
+    if config["DoTraining"]:
+        classifier = ResNetASPPClassifier(config)
         classifier.load_data()
+
+        # ✅ Fix: Ensure labels are converted to LongTensor during training
+        for batch_idx, (images, labels) in enumerate(classifier.train_loader):
+            images = images.float().to(classifier.device)
+            # ✅ Convert labels to LongTensor
+            labels = labels.to(classifier.device).long()
+
+            if batch_idx == 0:
+                # Debug: Check label dtype
+                print(f"✅ Label dtype: {labels.dtype}")
+
         classifier.train()
 
 def full_train(config):

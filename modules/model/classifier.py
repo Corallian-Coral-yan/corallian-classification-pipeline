@@ -7,17 +7,20 @@ from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
+from modules.model.aspp import ASPP
 from modules.data.image_dataset import ImageDataset
 
-class ResNetClassifier():
+class ResNetASPPClassifier(nn.Module):
     def __init__(self, config):
+        super(ResNetASPPClassifier, self).__init__()
+        
         self.config = config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if self.config["ForceUseCuda"]:
             self.assert_has_cuda()
 
-        print(f"Attempting to run ResNet{self.config["ResNetModel"]} with HDC on device {self.device}")
+        # print(f"Attempting to run ResNet{self.config["ResNetModel"]} with HDC on device {self.device}")
 
         self.annotations_file = self.config["IndexFile"]
         self.img_dir = self.config["ImageDir"]
@@ -32,20 +35,43 @@ class ResNetClassifier():
         self.validation_split = model_config["ValidationSplit"]
         self.criterion = nn.CrossEntropyLoss()  # todo: add config setting for loss function
 
+        # Choose ResNet model
         if self.config["ResNetModel"] == 18:
             resnet_model = ResNet18_HDC
         elif self.config["ResNetModel"] == 101:
             resnet_model = ResNet101_HDC
         else:
-            raise TypeError("Invalid ResNet Configuration, must be =18 or 101")
+            raise TypeError("Invalid ResNet Configuration, must be 18 or 101")
         
-        self.model = resnet_model(
-            num_classes=self.num_classes, 
-            verbose=self.model_verbose
-        ).to(self.device)
+        self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
+        self.feature_extractor = nn.Sequential(*list(self.model.children())[:-2])  # Keep only backbone
+        
+        # ASPP settings
+        self.aspp_enabled = self.config.get("ASPPEnabled", True) 
+        self.aspp_in_channels = self.config.get("ASPPInChannels", 1024)
+        self.aspp_out_channels = self.config.get("ASPPOutChannels", 256)
+        self.atrous_rates = self.config.get("AtrousRates", [6, 12, 18])
+        
+        # ASPP model
+        if self.aspp_enabled:
+            print(
+                f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
+            self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates)
+        
+        # Global Average Pooling + Fully Connected Classifier
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Linear(self.aspp_out_channels, self.num_classes)
 
         # todo: add config option for optimizer choice
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, weight_decay = 0.001, momentum = 0.9)  
+        
+    def forward(self, x):
+        x = self.feature_extractor(x)
+        x = self.aspp(x)
+        x = self.global_avg_pool(x)
+        x = torch.flatten(x, start_dim=1)
+        x = self.fc(x)
+        return x
 
     def load_data(self):
         self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split)
@@ -102,26 +128,26 @@ class ResNetClassifier():
     def train(self):
         # Train the model
         total_step = len(self.train_loader)
-
         print("Beginning training")
+        
         for epoch in range(self.num_epochs):
             for i, (images, labels) in enumerate(self.train_loader):  
                 print(f"Epoch {epoch + 1}/{self.num_epochs} | Batch {i + 1}/{total_step}")
                 
-                #Move tensors to the configured device
-                images = images.float()
-                images = images.to(self.device)
-                labels = labels.long()
-                labels = labels.to(self.device)
+                # Move tensors to the configured device
+                images = images.float().to(self.device)
+                labels = labels.to(self.device).long()
 
-                #Forward pass
-                outputs = self.model(images)
+                # Forward pass
+                outputs = self(images).float()
+                # outputs = self.model(images)
                 loss = self.criterion(outputs, labels)
 
-                #Backward and optimize
+                # Backward and optimize
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+                
                 del images, labels, outputs
                 torch.cuda.empty_cache()
                 gc.collect()
