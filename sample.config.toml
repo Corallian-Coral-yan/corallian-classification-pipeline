@@ -23,11 +23,6 @@ ImageDir = "D:/CROPPED-CORALS"
 
 ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/resnet18-aspp.pt"
 
-ASPPEnabled = true
-ASPPInChannels = 1024
-ASPPOutChannels = 256
-AtrousRates = [6, 12, 18]
-
 [training.model]
 NumClasses = 34
 NumEpochs = 20
@@ -36,6 +31,12 @@ Verbose = false
 RandomSeed = 42
 ValidationSplit = 0.1          # 10%
 LossFunction = "cross-entropy" # currently, only cross-entropy loss is supported
+
+[training.model.aspp]
+ASPPEnabled = true
+ASPPInChannels = 512
+ASPPOutChannels = 256
+AtrousRates = [6, 12, 18]
 
 [training.model.optimizer]
 OptimizerName = "sgd"  # currently, only sgd is supported

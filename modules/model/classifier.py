@@ -54,10 +54,11 @@ class ResNetASPPClassifier(nn.Module):
         self.feature_extractor = nn.Sequential(*list(self.model.children())[:-2])  # Keep only backbone
         
         # ASPP settings
-        self.aspp_enabled = self.config.get("ASPPEnabled", True) 
-        self.aspp_in_channels = self.config.get("ASPPInChannels", 1024)
-        self.aspp_out_channels = self.config.get("ASPPOutChannels", 256)
-        self.atrous_rates = self.config.get("AtrousRates", [6, 12, 18])
+        aspp_config = model_config["aspp"]
+        self.aspp_enabled = aspp_config.get("ASPPEnabled", True) 
+        self.aspp_in_channels = aspp_config.get("ASPPInChannels", 1024)
+        self.aspp_out_channels = aspp_config.get("ASPPOutChannels", 256)
+        self.atrous_rates = aspp_config.get("AtrousRates", [6, 12, 18])
         
         # ASPP model
         if self.aspp_enabled:
