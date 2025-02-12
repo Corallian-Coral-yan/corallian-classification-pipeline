@@ -1,0 +1,12 @@
+[preprocessing]
+Dirs = [
+    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo\\Q1",
+    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo\\Q2",
+    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo\\Q3",
+    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1801_USS Guardian, Tubbataha, Cagayancillo\\Q1",
+    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1801_USS Guardian, Tubbataha, Cagayancillo\\Q2",
+    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1801_USS Guardian, Tubbataha, Cagayancillo\\Q3",
+]
+UsePreprocessing = true
+OutputRoot = "D:\\CROPPED-CORALS"
+BaseInputDir = "D:\\ORIGINAL (aka MONITORING)"
