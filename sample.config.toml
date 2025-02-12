@@ -1,12 +1,31 @@
 [preprocessing]
-Dirs = [
-    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo\\Q1",
-    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo\\Q2",
-    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo\\Q3",
-    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1801_USS Guardian, Tubbataha, Cagayancillo\\Q1",
-    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1801_USS Guardian, Tubbataha, Cagayancillo\\Q2",
-    "D:\\ORIGINAL (aka MONITORING)\\2024 (COMPLETE)\\QUADRAT\\IMAGE AND CPCE FILE\\SHINE-1801_USS Guardian, Tubbataha, Cagayancillo\\Q3",
-]
 UsePreprocessing = true
-OutputRoot = "D:\\CROPPED-CORALS"
-BaseInputDir = "D:\\ORIGINAL (aka MONITORING)"
+UseCachedPreprocessing = true
+Dirs = [
+    "D:/ORIGINAL (aka MONITORING)/2024 (COMPLETE)/QUADRAT/IMAGE AND CPCE FILE/SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo/Q1",
+    "D:/ORIGINAL (aka MONITORING)/2024 (COMPLETE)/QUADRAT/IMAGE AND CPCE FILE/SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo/Q2",
+    "D:/ORIGINAL (aka MONITORING)/2024 (COMPLETE)/QUADRAT/IMAGE AND CPCE FILE/SHINE-1790_Min Ping Yu, Tubbataha, Cagayancillo/Q3",
+    "D:/ORIGINAL (aka MONITORING)/2024 (COMPLETE)/QUADRAT/IMAGE AND CPCE FILE/SHINE-1801_USS Guardian, Tubbataha, Cagayancillo/Q1",
+    "D:/ORIGINAL (aka MONITORING)/2024 (COMPLETE)/QUADRAT/IMAGE AND CPCE FILE/SHINE-1801_USS Guardian, Tubbataha, Cagayancillo/Q2",
+    "D:/ORIGINAL (aka MONITORING)/2024 (COMPLETE)/QUADRAT/IMAGE AND CPCE FILE/SHINE-1801_USS Guardian, Tubbataha, Cagayancillo/Q3",
+]
+OutputRoot = "D:/CROPPED-CORALS"
+BaseInputDir = "D:/ORIGINAL (aka MONITORING)"
+
+[training]
+DoTraining = true
+UseCachedModel = false
+ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis"
+ResNetModel = 18                                               # valid values: 18, 101
+ForceUseCuda = false
+IndexFile = "D:/CROPPED-CORALS/index.csv"
+ImageDir = "D:/CROPPED-CORALS"
+
+[training.model]
+NumClasses = 34
+NumEpochs = 20
+BatchSize = 16
+LearningRate = 0.01   # for SGD only
+Verbose = false
+RandomSeed = 42
+ValidationSplit = 0.1 # 10%
