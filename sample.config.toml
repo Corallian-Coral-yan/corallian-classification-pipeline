@@ -14,8 +14,8 @@ BaseInputDir = "D:/ORIGINAL (aka MONITORING)"
 
 [training]
 DoTraining = true
-UseCachedModel = false
-ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis"
+UseCachedModel = false                                         # NotImplemented
+ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis" # NotImplemented
 ResNetModel = 18                                               # valid values: 18, 101
 ForceUseCuda = false
 IndexFile = "D:/CROPPED-CORALS/index.csv"
