@@ -1,8 +1,7 @@
 import os
 import tomllib
 
-from modules.data.image_dataset import ImageDataset
-from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
+from modules.model.classifier import ResNetClassifier
 from modules.preprocessing.image_cropper import ImageCropper
 
 # Preprocessing pipeline
@@ -25,7 +24,10 @@ def preprocess(config):
 
 def train(config):
     # todo: implement UseCachedModel and model saving
-    pass
+    if (config["DoTraining"]):
+        classifier = ResNetClassifier(config)
+        classifier.load_data()
+        classifier.train()
 
 def full_train(config):
     preprocess(config["preprocessing"])
@@ -34,8 +36,6 @@ def full_train(config):
 def main():
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
-
-    # print(config)
 
     full_train(config)
 

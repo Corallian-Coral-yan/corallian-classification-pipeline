@@ -4,13 +4,11 @@ import os
 import pandas as pd
 from pathlib import PureWindowsPath, PurePosixPath
 from sklearn.preprocessing import LabelEncoder
-import torch
 from torch.utils.data import Dataset
-import torchvision.io
 from PIL import Image
 
 class ImageDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=True):
+    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False):
         self.annotations_file = annotations_file
         self.img_dir = img_dir
         self.verbose = verbose
@@ -35,8 +33,6 @@ class ImageDataset(Dataset):
             raw_labels["filepath"] = raw_labels["filepath"].apply(
                 lambda path: str(PurePosixPath(*PureWindowsPath(path).parts))
             )
-
-        print(raw_labels["filepath"])
 
         if train:
             self.img_labels = raw_labels.sample(frac=0.8,random_state=random_state)
