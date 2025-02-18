@@ -36,7 +36,7 @@ def train(config):
 
             if batch_idx == 0:
                 # Debug: Check label dtypes
-                print(f"✅ Label dtype: {labels.dtype}")
+                print(f"Label dtype: {labels.dtype}")
 
         # Loading cached model is for eval purposes, not for retraining
         if not config["UseCachedModel"]:

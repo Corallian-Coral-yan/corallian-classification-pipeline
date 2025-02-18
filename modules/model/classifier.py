@@ -9,6 +9,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP
 from modules.data.image_dataset import ImageDataset
+from modules.model.visual_embeddings import VisualEmbedding
 
 class ResNetASPPClassifier(nn.Module):
     def __init__(self, config):
@@ -66,8 +67,12 @@ class ResNetASPPClassifier(nn.Module):
                 f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates)
         
+        # Visual Embedding
+        print(f"Starting Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
+        self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256)
+
         # Global Average Pooling + Fully Connected Classifier
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
         self.fc = nn.Linear(self.aspp_out_channels, self.num_classes)
 
         optim_config = model_config["optimizer"]
@@ -83,9 +88,16 @@ class ResNetASPPClassifier(nn.Module):
         
     def forward(self, x):
         x = self.feature_extractor(x)
+        print(f"Debug: Shape after ResNet Feature Extractor: {x.shape}") 
         x = self.aspp(x)
+        print(f"Debug: Shape after ASPP: {x.shape}") 
+        x = self.visual_embedding(x)
+        print(f"Debug: Shape after Visual Embedding layer: {x.shape}") 
+        x = x.view(x.shape[0], x.shape[1], 1, 1)
         x = self.global_avg_pool(x)
+        print(f"Debug: Shape after Global Avg Pooling: {x.shape}") 
         x = torch.flatten(x, start_dim=1)
+        print(f"Debug: Shape before FC layer: {x.shape}") 
         x = self.fc(x)
         return x
 
