@@ -2,3 +2,5 @@ config.toml
 */__pycache__
 */*/__pycache__
 *.pt
+*.out
+*.err

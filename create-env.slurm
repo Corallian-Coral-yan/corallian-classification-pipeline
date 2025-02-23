@@ -7,7 +7,7 @@
 #SBATCH --output="create-env.out"
 #SBATCH --error="create-env.err"
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=jana_bantolino@dlsu.edu.ph  
+#SBATCH --mail-user=justin_lim@dlsu.edu.ph  
 
 ## For more `sbatch` options, use `man sbatch` in the HPC, or go to https://slurm.schedmd.com/sbatch.html.
 
@@ -51,7 +51,7 @@ source ~/.bashrc
 conda env remove -n corallian-env -y
 
 # Create the Conda environment from environment.yml
-conda env create -f environment.yml
+mamba env create -f environment.yml
 
 # Activate the Conda environment
 source activate corallian-env
