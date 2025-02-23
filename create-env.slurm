@@ -42,22 +42,14 @@ fi
 module purge
 module load anaconda
 
-## Ensure Conda is initialized before using it
-source ~/.bashrc  
-
 ## Main job. Run your codes and executables here; `srun` is optional.
 
 # Remove existing environment (optional, use only if you want a fresh install)
-conda env remove -n corallian-env -y
 
 # Create the Conda environment from environment.yml
-mamba env create -f environment.yml
+conda create -y -n corallian-env
 
-# Activate the Conda environment
-source activate corallian-env
-
-# Verify the environment setup
-conda list
+mamba install -y -n corallian-env --file requirements.txt 
 
 ## Flush the TMPDIR.
 if [[ $custom_tmpdir == "yes" ]]; then
