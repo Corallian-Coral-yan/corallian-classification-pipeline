@@ -50,18 +50,17 @@ source ~/.bashrc
 # Remove existing environment (optional, use only if you want a fresh install)
 conda env remove -n corallian-env -y
 
-# Create and activate the Conda environment
-conda create -y -n corallian-env
-conda activate corallian-env
+# Create the Conda environment from environment.yml
+conda env create -f environment.yml
 
-# Install dependencies from requirements.txt
-conda install -y --file requirements.txt
+# Activate the Conda environment
+source activate corallian-env
 
 # Verify the environment setup
 conda list
 
 ## Flush the TMPDIR.
-if [[ $custom_tmp == "yes" ]]; then
+if [[ $custom_tmpdir == "yes" ]]; then
    rm -rf $TMPDIR
    echo "Cleared the TMPDIR (${TMPDIR})"
 fi
