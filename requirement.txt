@@ -1,7 +1,0 @@
-pytorch==1.9
-pytorch-cuda<12
-torchvision
-numpy<2
-pandas
-scikit-learn
-pillow

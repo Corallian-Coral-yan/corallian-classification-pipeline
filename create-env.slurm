@@ -5,6 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --job-name="[Corallian] Create environment"
 #SBATCH --output="create-env.out"
+#SBATCH --error="create-env.err"
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=jana_bantolino@dlsu.edu.ph  
 
@@ -41,9 +42,23 @@ fi
 module purge
 module load anaconda
 
+## Ensure Conda is initialized before using it
+source ~/.bashrc  
+
 ## Main job. Run your codes and executables here; `srun` is optional.
+
+# Remove existing environment (optional, use only if you want a fresh install)
+conda env remove -n corallian-env -y
+
+# Create and activate the Conda environment
 conda create -y -n corallian-env
-conda install -n corallian-env -c pytorch -c nvidia --file requirements.txt
+conda activate corallian-env
+
+# Install dependencies from requirements.txt
+conda install -y --file requirements.txt
+
+# Verify the environment setup
+conda list
 
 ## Flush the TMPDIR.
 if [[ $custom_tmp == "yes" ]]; then
