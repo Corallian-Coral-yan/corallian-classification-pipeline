@@ -1,5 +1,4 @@
 import gc
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,8 +20,6 @@ class ResNetASPPClassifier(nn.Module):
         if self.config["ForceUseCuda"]:
             self.assert_has_cuda()
 
-        # print(f"Attempting to run ResNet{self.config["ResNetModel"]} with HDC on device {self.device}")
-
         self.annotations_file = self.config["IndexFile"]
         self.img_dir = self.config["ImageDir"]
             
@@ -34,12 +31,13 @@ class ResNetASPPClassifier(nn.Module):
         self.random_seed = model_config["RandomSeed"]
         self.validation_split = model_config["ValidationSplit"]
 
+        # Loss function
         if model_config["LossFunction"] == "cross-entropy":
             self.criterion = nn.CrossEntropyLoss()
         else:
             raise TypeError(f"Invalid Loss Function: {model_config["LossFunction"]}")
 
-        # Choose ResNet model
+        # ResNet backbone
         if self.config["ResNetModel"] == 18:
             resnet_model = ResNet18_HDC
         elif self.config["ResNetModel"] == 101:
@@ -47,11 +45,14 @@ class ResNetASPPClassifier(nn.Module):
         else:
             raise TypeError("Invalid ResNet Configuration, must be 18 or 101")
         
+        # Cached model
         if self.config["UseCachedModel"]:
             self.model = torch.load(self.config["ModelFilepath"], weights_only=False)
             print(f"Using cached model at {self.config["ModelFilepath"]}")
         else:
             self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
+            
+        # Extract feature maps from ResNet (excluding last classification layers)
         self.feature_extractor = nn.Sequential(*list(self.model.children())[:-2])  # Keep only backbone
         
         # ASPP settings
