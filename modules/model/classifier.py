@@ -2,6 +2,7 @@ import gc
 import numpy as np
 import torch
 import torch.nn as nn
+from .metrics import compute_metrics
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 
@@ -47,8 +48,17 @@ class ResNetASPPClassifier(nn.Module):
         
         # Cached model
         if self.config["UseCachedModel"]:
+            print(f"Loading cached model from {self.config['ModelFilepath']}...")
             self.model = torch.load(self.config["ModelFilepath"], weights_only=False)
-            print(f"Using cached model at {self.config["ModelFilepath"]}")
+            self.model.to(self.device)
+            self.model.eval()  # Set to evaluation mode
+
+            print("Model loaded successfully!")
+
+            self.load_data()  # Load data after loading cached model
+            self.evaluate()  # Run evaluation after loading cached model
+            
+            return
         else:
             self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
             
@@ -69,8 +79,12 @@ class ResNetASPPClassifier(nn.Module):
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates)
         
         # Visual Embedding
-        print(f"Starting Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
-        self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256)
+        if self.visual_embedding_enabled:
+            print(f"Starting Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
+            visual_embedding_config = model_config["visual_embedding"]
+            self.visual_embedding_enabled = visual_embedding_config.get("VisualEmbeddingEnabled", True)
+            print(f"Using Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
+            self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256)
 
         # Global Average Pooling + Fully Connected Classifier
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
@@ -89,16 +103,14 @@ class ResNetASPPClassifier(nn.Module):
         
     def forward(self, x):
         x = self.feature_extractor(x)
-        print(f"Debug: Shape after ResNet Feature Extractor: {x.shape}") 
         x = self.aspp(x)
-        print(f"Debug: Shape after ASPP: {x.shape}") 
-        x = self.visual_embedding(x)
-        print(f"Debug: Shape after Visual Embedding layer: {x.shape}") 
-        x = x.view(x.shape[0], x.shape[1], 1, 1)
+
+        if self.visual_embedding_enabled:
+            x = self.visual_embedding(x)
+            x = x.view(x.shape[0], x.shape[1], 1, 1)
+
         x = self.global_avg_pool(x)
-        print(f"Debug: Shape after Global Avg Pooling: {x.shape}") 
         x = torch.flatten(x, start_dim=1)
-        print(f"Debug: Shape before FC layer: {x.shape}") 
         x = self.fc(x)
         return x
 
@@ -186,6 +198,8 @@ class ResNetASPPClassifier(nn.Module):
 
         #Validation
         with torch.no_grad():
+            y_true = []
+            y_pred = []
             correct = 0
             total = 0
             for images, labels in self.valid_loader:
@@ -193,14 +207,58 @@ class ResNetASPPClassifier(nn.Module):
                 labels = labels.to(self.device)
                 outputs = self.model(images)
                 _, predicted = torch.max(outputs.data, 1)
+
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
+                y_true.extend(labels.cpu().numpy())  # Convert to CPU & NumPy
+                y_pred.extend(predicted.cpu().numpy())  # Convert to CPU & NumPy
                 del images, labels, outputs
 
+            print("y_true:", y_true[:10])  # Print first 10 labels
+            print("y_pred:", y_pred[:10])  # Print first 10 predictions
             print('Accuracy of the network on the {} validation images: {} %'.format(5000, 100 * correct / total))
-
+            
+              
         if self.config["SaveModel"]:
+            print("Saving model. . .")
             self.save()
 
     def save(self):
         torch.save(self.model, self.config["ModelFilepath"])
+
+    def evaluate(self):
+        print("Running evaluation on validationn set. . .")
+
+        with torch.no_grad():
+            y_true = []
+            y_pred = []
+            correct = 0
+            total = 0
+
+            for images, labels in self.valid_loader:
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                outputs = self.model(images)
+                _, predicted = torch.max(outputs.data, 1)
+
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(predicted.cpu().numpy())
+
+                del images, labels, outputs
+
+            print("y_true:", y_true[:10])  # Show first 10 labels
+            print("y_pred:", y_pred[:10])  # Show first 10 predictions
+            print("Unique labels in y_true:", set(y_true))
+            print("Unique labels in y_pred:", set(y_pred))
+
+            accuracy = 100 * correct / total
+            print(f'Validation Accuracy: {accuracy:.2f}%')
+
+            # Compute precision, recall, F1-score
+            metrics = compute_metrics(y_true, y_pred)
+            print("Metrics dictionary:", metrics)  # Debugging step
+            print(f'Precision: {metrics["precision"]:.4f}')
+            print(f'Recall: {metrics["recall"]:.4f}')
+            print(f'F1 Score: {metrics["f1_score"]:.4f}')
