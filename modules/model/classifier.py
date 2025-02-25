@@ -54,10 +54,6 @@ class ResNetASPPClassifier(nn.Module):
             self.model.eval()  # Set to evaluation mode
 
             print("Model loaded successfully!")
-
-            self.load_data()  # Load data after loading cached model
-            self.evaluate()  # Run evaluation after loading cached model
-            
             return
         else:
             self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
@@ -207,7 +203,7 @@ class ResNetASPPClassifier(nn.Module):
                 labels = labels.to(self.device)
                 outputs = self.model(images)
                 _, predicted = torch.max(outputs.data, 1)
-
+ 
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
                 y_true.extend(labels.cpu().numpy())  # Convert to CPU & NumPy
@@ -226,8 +222,8 @@ class ResNetASPPClassifier(nn.Module):
     def save(self):
         torch.save(self.model, self.config["ModelFilepath"])
 
-    def evaluate(self):
-        print("Running evaluation on validationn set. . .")
+    def evaluate(self, data_loader, name=""):
+        print(f"Running evaluation on data loader {name}")
 
         with torch.no_grad():
             y_true = []
@@ -235,7 +231,9 @@ class ResNetASPPClassifier(nn.Module):
             correct = 0
             total = 0
 
-            for images, labels in self.valid_loader:
+            total_step = len(data_loader)
+            for i, (images, labels) in enumerate(data_loader):
+                print(f"Evaluating | Batch {i + 1}/{total_step}")
                 images = images.to(self.device)
                 labels = labels.to(self.device)
                 outputs = self.model(images)
@@ -254,7 +252,7 @@ class ResNetASPPClassifier(nn.Module):
             print("Unique labels in y_pred:", set(y_pred))
 
             accuracy = 100 * correct / total
-            print(f'Validation Accuracy: {accuracy:.2f}%')
+            print(f'Accuracy: {accuracy:.2f}%')
 
             # Compute precision, recall, F1-score
             metrics = compute_metrics(y_true, y_pred)
@@ -262,3 +260,9 @@ class ResNetASPPClassifier(nn.Module):
             print(f'Precision: {metrics["precision"]:.4f}')
             print(f'Recall: {metrics["recall"]:.4f}')
             print(f'F1 Score: {metrics["f1_score"]:.4f}')
+
+    def validate(self):
+        self.evaluate(self.valid_loader, "valid_loader")  
+
+    def test(self):
+        return self.evaluate(self.test_loader, "test_loader")

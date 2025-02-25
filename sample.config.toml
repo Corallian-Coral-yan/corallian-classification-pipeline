@@ -8,6 +8,7 @@ InputRecurse = true
 
 [training]
 DoTraining = true
+DoValidation = true
 UseCachedModel = false
 SaveModel = true
 ResNetModel = 18                          # valid values: 18, 101
@@ -37,3 +38,6 @@ OptimizerName = "sgd"  # currently, only sgd is supported
 SGDLearningRate = 0.01
 SGDWeightDecay = 0.001
 SGDMomentum = 0.9
+
+[testing]
+DoTesting = true

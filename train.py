@@ -23,10 +23,11 @@ def preprocess(config):
         )
         cropper.begin_cropping()
 
-def train(config):
-    if config["DoTraining"]:
-        classifier = ResNetASPPClassifier(config)
+def train(train_config, test_config):
+    if train_config["DoTraining"] or train_config["DoValidation"] or test_config["DoTesting"]:
+        classifier = ResNetASPPClassifier(train_config)
         classifier.load_data()
+        print("Classifier created")
 
         # ✅ Fix: Ensure labels are converted to LongTensor during training
         for batch_idx, (images, labels) in enumerate(classifier.train_loader):
@@ -39,12 +40,19 @@ def train(config):
                 print(f"Label dtype: {labels.dtype}")
 
         # Loading cached model is for eval purposes, not for retraining
-        if not config["UseCachedModel"]:
+        if not train_config["UseCachedModel"]:
             classifier.train()
+
+        if train_config["DoValidation"]:
+            classifier.validate()     # Run evaluation after loading cached model
+
+        if test_config["DoTesting"]:
+            classifier.test()
+        
 
 def full_train(config):
     preprocess(config["preprocessing"])
-    train(config["training"])
+    train(config["training"], config["testing"])
 
     print("Done")
 
