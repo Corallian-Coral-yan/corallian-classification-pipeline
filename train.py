@@ -1,5 +1,6 @@
 import os
 import tomllib
+from pathlib import Path
 
 from modules.model.classifier import ResNetASPPClassifier
 from modules.preprocessing.image_cropper import ImageCropper
@@ -9,7 +10,8 @@ def preprocess(config):
     # If there is an index file already at the output and cached preprocessing is on,
     # skip this step
     if config["UsePreprocessing"] and config["UseCachedPreprocessing"]:
-        index_filepath = os.path.join(config["OutputRoot"], "index.csv")
+        index_filepath = Path(config["OutputRoot"]) / "index.csv"
+        index_filepath = index_filepath.as_posix()
         if os.path.isfile(index_filepath):
             print(f"Using cached image crop index file at {index_filepath}, image cropping skipped")
             return
@@ -29,10 +31,10 @@ def train(train_config, test_config):
         classifier.load_data()
         print("Classifier created")
 
-        # ✅ Fix: Ensure labels are converted to LongTensor during training
+        # Fix: Ensure labels are converted to LongTensor during training
         for batch_idx, (images, labels) in enumerate(classifier.train_loader):
             images = images.float().to(classifier.device)
-            # ✅ Convert labels to LongTensor
+            # Convert labels to LongTensor
             labels = labels.to(classifier.device).long()
 
             if batch_idx == 0:

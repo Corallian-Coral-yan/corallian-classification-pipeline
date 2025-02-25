@@ -64,21 +64,23 @@ class ResNetASPPClassifier(nn.Module):
         # ASPP settings
         aspp_config = model_config["aspp"]
         self.aspp_enabled = aspp_config.get("ASPPEnabled", True) 
-        self.aspp_in_channels = aspp_config.get("ASPPInChannels", 1024)
-        self.aspp_out_channels = aspp_config.get("ASPPOutChannels", 256)
-        self.atrous_rates = aspp_config.get("AtrousRates", [6, 12, 18])
         
         # ASPP model
         if self.aspp_enabled:
-            print(
-                f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
+            print("ASPP Enabled. Loading ASPP model. . .")
+            self.aspp_in_channels = aspp_config.get("ASPPInChannels", 1024)
+            self.aspp_out_channels = aspp_config.get("ASPPOutChannels", 256)
+            self.atrous_rates = aspp_config.get("AtrousRates", [6, 12, 18])
+
+            print(f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates)
-        
+        else:
+            print("ASPP Disabled. . .")
+            self.aspp_out_channels = 512  # Default output channels from ResNet
         # Visual Embedding
+        self.visual_embedding_enabled = self.config["model"]["visual_embedding"].get("EmbeddingEnabled", True)
+    
         if self.visual_embedding_enabled:
-            print(f"Starting Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
-            visual_embedding_config = model_config["visual_embedding"]
-            self.visual_embedding_enabled = visual_embedding_config.get("VisualEmbeddingEnabled", True)
             print(f"Using Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
             self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256)
 
@@ -99,7 +101,9 @@ class ResNetASPPClassifier(nn.Module):
         
     def forward(self, x):
         x = self.feature_extractor(x)
-        x = self.aspp(x)
+        
+        if self.aspp_enabled:
+            x = self.aspp(x)
 
         if self.visual_embedding_enabled:
             x = self.visual_embedding(x)
@@ -177,6 +181,7 @@ class ResNetASPPClassifier(nn.Module):
 
                 # Forward pass
                 outputs = self(images).float()
+                
                 # outputs = self.model(images)
                 loss = self.criterion(outputs, labels)
 
@@ -193,27 +198,7 @@ class ResNetASPPClassifier(nn.Module):
                         .format(epoch+1, self.num_epochs, loss.item()))
 
         #Validation
-        with torch.no_grad():
-            y_true = []
-            y_pred = []
-            correct = 0
-            total = 0
-            for images, labels in self.valid_loader:
-                images = images.to(self.device)
-                labels = labels.to(self.device)
-                outputs = self.model(images)
-                _, predicted = torch.max(outputs.data, 1)
- 
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-                y_true.extend(labels.cpu().numpy())  # Convert to CPU & NumPy
-                y_pred.extend(predicted.cpu().numpy())  # Convert to CPU & NumPy
-                del images, labels, outputs
-
-            print("y_true:", y_true[:10])  # Print first 10 labels
-            print("y_pred:", y_pred[:10])  # Print first 10 predictions
-            print('Accuracy of the network on the {} validation images: {} %'.format(5000, 100 * correct / total))
-            
+        self.evaluate()
               
         if self.config["SaveModel"]:
             print("Saving model. . .")
