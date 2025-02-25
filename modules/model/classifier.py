@@ -198,7 +198,7 @@ class ResNetASPPClassifier(nn.Module):
                         .format(epoch+1, self.num_epochs, loss.item()))
 
         #Validation
-        self.evaluate()
+        self.evaluate(self.valid_loader, "valid_loader")
               
         if self.config["SaveModel"]:
             print("Saving model. . .")
