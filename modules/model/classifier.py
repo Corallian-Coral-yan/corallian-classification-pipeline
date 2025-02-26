@@ -17,6 +17,7 @@ class ResNetASPPClassifier(nn.Module):
         
         self.config = config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Running classifier on device {self.device}")
 
         if self.config["ForceUseCuda"]:
             self.assert_has_cuda()
