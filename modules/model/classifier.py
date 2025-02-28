@@ -98,7 +98,7 @@ class ResNetASPPClassifier(nn.Module):
                 momentum = optim_config["SGDMomentum"]
             )  
         else:
-            raise TypeError(f"Invalid Optimizer: {optim_config["OptimizerName"]}")
+            raise TypeError(f"Invalid Optimizer: {optim_config['OptimizerName']}")
         
     def forward(self, x):
         x = self.feature_extractor(x)
