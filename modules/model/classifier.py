@@ -37,7 +37,7 @@ class ResNetASPPClassifier(nn.Module):
         if model_config["LossFunction"] == "cross-entropy":
             self.criterion = nn.CrossEntropyLoss()
         else:
-            raise TypeError(f"Invalid Loss Function: {model_config["LossFunction"]}")
+            raise TypeError(f"Invalid Loss Function: {model_config['LossFunction']}")
 
         # ResNet backbone
         if self.config["ResNetModel"] == 18:
