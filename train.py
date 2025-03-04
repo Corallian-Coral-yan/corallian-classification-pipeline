@@ -2,6 +2,8 @@ import os
 import tomllib
 from pathlib import Path
 
+import pandas as pd
+
 from modules.model.classifier import ResNetASPPClassifier
 from modules.preprocessing.image_cropper import ImageCropper
 
@@ -27,6 +29,10 @@ def preprocess(config):
 
 def train(train_config, test_config):
     if train_config["DoTraining"] or train_config["DoValidation"] or test_config["DoTesting"]:
+        if train_config["model"]["NumClasses"] == 'auto':
+            train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"])
+            print(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
+
         classifier = ResNetASPPClassifier(train_config)
         classifier.load_data()
         print("Classifier created")
@@ -51,6 +57,11 @@ def train(train_config, test_config):
         if test_config["DoTesting"]:
             classifier.test()
         
+
+def get_num_classes(annotations_filepath):
+    df = pd.read_csv(annotations_filepath)
+    return len(df['annotation'].unique())
+
 
 def full_train(config):
     preprocess(config["preprocessing"])

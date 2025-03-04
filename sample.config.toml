@@ -19,7 +19,7 @@ ImageDir = "D:/CROPPED-CORALS"
 ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/resnet18-aspp.pt"
 
 [training.model]
-NumClasses = 34
+NumClasses = "auto"            # can be any number or "auto"
 NumEpochs = 20
 BatchSize = 16
 Verbose = false
