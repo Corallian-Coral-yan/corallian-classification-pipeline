@@ -8,7 +8,7 @@
 #SBATCH --job-name="[Corallian] Classification Pipeline"
 #SBATCH --output="run-classifier.out"
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=jana_bantolino@dlsu.edu.ph  
+#SBATCH --mail-user=justin_lim@dlsu.edu.ph
 
 ## For more `sbatch` options, use `man sbatch` in the HPC, or go to https://slurm.schedmd.com/sbatch.html.
 
