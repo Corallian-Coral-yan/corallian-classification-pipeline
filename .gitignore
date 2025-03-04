@@ -4,3 +4,4 @@ config.toml
 *.pt
 *.out
 *.err
+*.slurm.swp
