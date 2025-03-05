@@ -88,8 +88,8 @@ class ResNetASPPClassifier(nn.Module):
             self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256).to(self.device)
 
         # Global Average Pooling + Fully Connected Classifier
-        self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
-        self.fc = nn.Linear(self.aspp_out_channels, self.num_classes)
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1)).to(self.device)
+        self.fc = nn.Linear(self.aspp_out_channels, self.num_classes).to(self.device)
 
         optim_config = model_config["optimizer"]
         if optim_config["OptimizerName"] == "sgd":
