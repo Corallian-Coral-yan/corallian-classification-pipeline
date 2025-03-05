@@ -44,3 +44,9 @@ EmbeddingEnabled = true
 
 [testing]
 DoTesting = true
+
+[logging]
+# to revert to print behavior, use LogFormat = "%(message)s"
+LogFormat = "[%(asctime)s] %(levelname)s:%(message)s"
+UseLogFile = false
+LogFile = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/pipeline.log"

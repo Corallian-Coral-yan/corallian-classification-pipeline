@@ -2,6 +2,7 @@
 # from Understanding Convolution for Semantic Segmentation
 # https://doi.org/10.1109/WACV.2018.00163
 
+import logging
 import torch.nn as nn
 
 """
@@ -171,7 +172,7 @@ class ResNet18_HDC(nn.Module):
     
     def _print(self, *args, **kwargs):
         if self.verbose:
-            print(*args, **kwargs)
+            logging.info(*args, **kwargs)
 
 
 
@@ -250,4 +251,4 @@ class ResNet101_HDC(nn.Module):
     
     def _print(self, *args, **kwargs):
         if self.verbose:
-            print(*args, **kwargs)
+            logging.info(*args, **kwargs)

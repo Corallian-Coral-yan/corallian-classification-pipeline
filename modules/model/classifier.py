@@ -1,4 +1,6 @@
 import gc
+import logging
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,7 +19,7 @@ class ResNetASPPClassifier(nn.Module):
         
         self.config = config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"Running classifier on device {self.device}")
+        logging.info(f"Running classifier on device {self.device}")
 
         if self.config["ForceUseCuda"]:
             self.assert_has_cuda()
@@ -49,12 +51,12 @@ class ResNetASPPClassifier(nn.Module):
         
         # Cached model
         if self.config["UseCachedModel"]:
-            print(f"Loading cached model from {self.config['ModelFilepath']}...")
+            logging.info(f"Loading cached model from {self.config['ModelFilepath']}...")
             self.model = torch.load(self.config["ModelFilepath"], weights_only=False)
             self.model.to(self.device)
             self.model.eval()  # Set to evaluation mode
 
-            print("Model loaded successfully!")
+            logging.info("Model loaded successfully!")
             return
         else:
             self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
@@ -68,21 +70,21 @@ class ResNetASPPClassifier(nn.Module):
         
         # ASPP model
         if self.aspp_enabled:
-            print("ASPP Enabled. Loading ASPP model. . .")
+            logging.info("ASPP Enabled. Loading ASPP model. . .")
             self.aspp_in_channels = aspp_config.get("ASPPInChannels", 1024)
             self.aspp_out_channels = aspp_config.get("ASPPOutChannels", 256)
             self.atrous_rates = aspp_config.get("AtrousRates", [6, 12, 18])
 
-            print(f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
+            logging.info(f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates)
         else:
-            print("ASPP Disabled. . .")
+            logging.info("ASPP Disabled. . .")
             self.aspp_out_channels = 512  # Default output channels from ResNet
         # Visual Embedding
         self.visual_embedding_enabled = self.config["model"]["visual_embedding"].get("EmbeddingEnabled", True)
     
         if self.visual_embedding_enabled:
-            print(f"Using Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
+            logging.info(f"Using Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
             self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256)
 
         # Global Average Pooling + Fully Connected Classifier
@@ -118,7 +120,7 @@ class ResNetASPPClassifier(nn.Module):
     def load_data(self):
         self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split)
         self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True)
-        print("Successfully created data loaders")
+        logging.info("Successfully created data loaders")
 
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False):
         # define transforms
@@ -170,11 +172,11 @@ class ResNetASPPClassifier(nn.Module):
     def train(self):
         # Train the model
         total_step = len(self.train_loader)
-        print("Beginning training")
+        logging.info("Beginning training")
         
         for epoch in range(self.num_epochs):
             for i, (images, labels) in enumerate(self.train_loader):  
-                print(f"Epoch {epoch + 1}/{self.num_epochs} | Batch {i + 1}/{total_step}")
+                logging.info(f"Epoch {epoch + 1}/{self.num_epochs} | Batch {i + 1}/{total_step}")
                 
                 # Move tensors to the configured device
                 images = images.float().to(self.device)
@@ -195,21 +197,21 @@ class ResNetASPPClassifier(nn.Module):
                 torch.cuda.empty_cache()
                 gc.collect()
 
-            print ('Epoch [{}/{}], Loss: {:.4f}' 
+            logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
                         .format(epoch+1, self.num_epochs, loss.item()))
 
         #Validation
         self.evaluate(self.valid_loader, "valid_loader")
               
         if self.config["SaveModel"]:
-            print("Saving model. . .")
+            logging.info("Saving model. . .")
             self.save()
 
     def save(self):
         torch.save(self.model, self.config["ModelFilepath"])
 
     def evaluate(self, data_loader, name=""):
-        print(f"Running evaluation on data loader {name}")
+        logging.info(f"Running evaluation on data loader {name}")
 
         with torch.no_grad():
             y_true = []
@@ -219,7 +221,7 @@ class ResNetASPPClassifier(nn.Module):
 
             total_step = len(data_loader)
             for i, (images, labels) in enumerate(data_loader):
-                print(f"Evaluating | Batch {i + 1}/{total_step}")
+                logging.info(f"Evaluating | Batch {i + 1}/{total_step}")
                 images = images.to(self.device)
                 labels = labels.to(self.device)
                 outputs = self.model(images)
@@ -232,20 +234,20 @@ class ResNetASPPClassifier(nn.Module):
 
                 del images, labels, outputs
 
-            print("y_true:", y_true[:10])  # Show first 10 labels
-            print("y_pred:", y_pred[:10])  # Show first 10 predictions
-            print("Unique labels in y_true:", set(y_true))
-            print("Unique labels in y_pred:", set(y_pred))
+            logging.info("y_true:", y_true[:10])  # Show first 10 labels
+            logging.info("y_pred:", y_pred[:10])  # Show first 10 predictions
+            logging.info("Unique labels in y_true:", set(y_true))
+            logging.info("Unique labels in y_pred:", set(y_pred))
 
             accuracy = 100 * correct / total
-            print(f'Accuracy: {accuracy:.2f}%')
+            logging.info(f'Accuracy: {accuracy:.2f}%')
 
             # Compute precision, recall, F1-score
             metrics = compute_metrics(y_true, y_pred)
-            print("Metrics dictionary:", metrics)  # Debugging step
-            print(f'Precision: {metrics["precision"]:.4f}')
-            print(f'Recall: {metrics["recall"]:.4f}')
-            print(f'F1 Score: {metrics["f1_score"]:.4f}')
+            logging.info("Metrics dictionary:", metrics)  # Debugging step
+            logging.info(f'Precision: {metrics["precision"]:.4f}')
+            logging.info(f'Recall: {metrics["recall"]:.4f}')
+            logging.info(f'F1 Score: {metrics["f1_score"]:.4f}')
 
     def validate(self):
         self.evaluate(self.valid_loader, "valid_loader")  

@@ -1,3 +1,5 @@
+import logging
+
 import torch
 import torch.nn as nn
 
@@ -16,7 +18,7 @@ class ResidualBlock(nn.Module):
         self.out_channels = out_channels
 
     def forward(self, x):
-        print("Start of X block: " + str(x.size()))
+        logging.debug("Start of X block: " + str(x.size()))
 
         residual = x
         out = self.conv1(x)
@@ -26,7 +28,7 @@ class ResidualBlock(nn.Module):
         out += residual
         out = self.relu(out)
 
-        print("End of X block: " + str(x.size()))
+        logging.debug("End of X block: " + str(x.size()))
 
 
         return out

@@ -6,6 +6,7 @@ from pathlib import PureWindowsPath, PurePosixPath
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 from PIL import Image
+import logging
 
 class ImageDataset(Dataset):
     def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False):
@@ -62,5 +63,5 @@ class ImageDataset(Dataset):
 
     def _print(self, *args, **kwargs):
         if self.verbose == True:
-            print(*args, **kwargs)
+            logging.info(*args, **kwargs)
         

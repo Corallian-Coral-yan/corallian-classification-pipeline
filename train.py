@@ -1,6 +1,7 @@
 import os
 import tomllib
 from pathlib import Path
+import logging
 
 import pandas as pd
 
@@ -15,7 +16,7 @@ def preprocess(config):
         index_filepath = Path(config["OutputRoot"]) / "index.csv"
         index_filepath = index_filepath.as_posix()
         if os.path.isfile(index_filepath):
-            print(f"Using cached image crop index file at {index_filepath}, image cropping skipped")
+            logging.info(f"Using cached image crop index file at {index_filepath}, image cropping skipped")
             return
 
     if config["UsePreprocessing"]:
@@ -31,11 +32,11 @@ def train(train_config, test_config):
     if train_config["DoTraining"] or train_config["DoValidation"] or test_config["DoTesting"]:
         if train_config["model"]["NumClasses"] == 'auto':
             train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"])
-            print(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
+            logging.info(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
 
         classifier = ResNetASPPClassifier(train_config)
         classifier.load_data()
-        print("Classifier created")
+        logging.info("Classifier created")
 
         # Fix: Ensure labels are converted to LongTensor during training
         for batch_idx, (images, labels) in enumerate(classifier.train_loader):
@@ -45,7 +46,7 @@ def train(train_config, test_config):
 
             if batch_idx == 0:
                 # Debug: Check label dtypes
-                print(f"Label dtype: {labels.dtype}")
+                logging.info(f"Label dtype: {labels.dtype}")
 
         # Loading cached model is for eval purposes, not for retraining
         if not train_config["UseCachedModel"]:
@@ -67,11 +68,20 @@ def full_train(config):
     preprocess(config["preprocessing"])
     train(config["training"], config["testing"])
 
-    print("Done")
+    logging.info("Done")
 
 def main():
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
+
+    logging_config = config["logging"]
+
+    logging.basicConfig(
+        format=logging_config["LogFormat"], 
+        level=logging.DEBUG, 
+        filename=logging_config["LogFile"] if logging_config["UseLogFile"] else None,
+        filemode='w'
+    )
 
     full_train(config)
 

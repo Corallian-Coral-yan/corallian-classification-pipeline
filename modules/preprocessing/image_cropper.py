@@ -2,6 +2,7 @@ import csv
 import os
 import pandas as pandas
 import cv2
+import logging
 
 # For image tags
 from PIL import Image
@@ -39,7 +40,7 @@ class ImageCropper():
                     return value.replace(":", "").replace(" ", "_")
 
         except Exception as e:
-            print(f"Error extracting timestamp from {image_path}: {e}")
+            logging.warning(f"Error extracting timestamp from {image_path}: {e}")
 
         return None
 
@@ -59,10 +60,10 @@ class ImageCropper():
             for dir_path in self.dirs:
             # Iterate through each directory
                 if not os.path.exists(dir_path):
-                    print(f"Directory does not exist: {dir_path}")
+                    logging.warning(f"Directory does not exist: {dir_path}")
                     return
 
-                print(f"Processing directory: {dir_path}")
+                logging.info(f"Processing directory: {dir_path}")
 
                 # Process each CPCE annotation file
                 if self.recurse:
@@ -95,11 +96,11 @@ class ImageCropper():
 
                         self.process_cpc_file(dir_path, annotation_file, relative_path, cropped_output_dir, index_file_writer)
                     
-        print("Cropping complete!")
+        logging.info("Cropping complete!")
 
     def process_cpc_file(self, dir_path, annotation_file, relative_path, cropped_output_dir, index_file_writer):
         annotation_path = os.path.join(dir_path, annotation_file)
-        print(f"Processing: {annotation_path}")
+        logging.info(f"Processing: {annotation_path}")
 
         # Parse the annotation file
         with open(annotation_path, "r", encoding="ISO-8859-1") as file:
@@ -108,25 +109,25 @@ class ImageCropper():
         try:
             # Extract image name
             image_name = os.path.splitext(annotation_file)[0] + ".JPG"
-            print(f"Extracted image name: {image_name}")
+            logging.info(f"Extracted image name: {image_name}")
 
             # Set start_index to the 6th line (index 5)
             start_index = 5
 
             # Ensure the file has at least 6 lines
             if len(lines) <= start_index:
-                print(f"Skipping file {annotation_file}: File has fewer than 6 lines.")
+                logging.warning(f"Skipping file {annotation_file}: File has fewer than 6 lines.")
                 return
 
             # Parse the number of annotations
             try:
                 num_annotations = int(lines[start_index].strip())
             except ValueError:
-                print(f"Skipping file {annotation_file} due to invalid number of annotations.")
+                logging.warning(f"Skipping file {annotation_file} due to invalid number of annotations.")
                 return
 
             if num_annotations <= 0:
-                print(f"Skipping file {annotation_file} due to zero or negative annotations.")
+                logging.warning(f"Skipping file {annotation_file} due to zero or negative annotations.")
                 return
 
             # Extract points and labels
@@ -144,18 +145,18 @@ class ImageCropper():
                     label = label_line.split(",")[1].strip('"')
                     labels.append(label)
                 except (ValueError, IndexError):
-                    print(f"Skipping invalid line in file {annotation_file}: {point_line} or {label_line}")
+                    logging.warning(f"Skipping invalid line in file {annotation_file}: {point_line} or {label_line}")
 
-            print(f"Extracted coordinates for {annotation_file}: {points}")
+            logging.info(f"Extracted coordinates for {annotation_file}: {points}")
 
         except Exception as e:
-            print(f"Error parsing annotation file {annotation_file}: {e}")
+            logging.info(f"Error parsing annotation file {annotation_file}: {e}")
             return
 
         # Find the corresponding image
         image_path = os.path.join(dir_path, image_name)
         if not os.path.exists(image_path):
-            print(f"Image not found: {image_name}")
+            logging.error(f"Image not found: {image_name}")
             return
 
         # Extract timestamp
@@ -166,7 +167,7 @@ class ImageCropper():
         # Load the image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"Failed to load image: {image_path}")
+            logging.error(f"Failed to load image: {image_path}")
             return
 
         # Get image dimensions
@@ -178,7 +179,7 @@ class ImageCropper():
         scale_x = image_width / max_x
         scale_y = image_height / max_y
 
-        print(f"Scaling factors: scale_x={scale_x}, scale_y={scale_y}")
+        logging.info(f"Scaling factors: scale_x={scale_x}, scale_y={scale_y}")
 
         # Crop and save each annotation
         for i, (point, label) in enumerate(zip(points, labels)):
@@ -196,7 +197,7 @@ class ImageCropper():
 
             # Check for valid crop
             if x_min >= x_max or y_min >= y_max:
-                print(f"Skipping invalid crop at ({scaled_x}, {scaled_y}) in image {image_name}. Crop is empty.")
+                logging.info(f"Skipping invalid crop at ({scaled_x}, {scaled_y}) in image {image_name}. Crop is empty.")
                 continue
 
             # Crop the image
@@ -204,7 +205,7 @@ class ImageCropper():
 
             # Check if cropped image is empty
             if cropped.size == 0:
-                print(f"Skipping empty crop for {label}_{os.path.splitext(image_name)[0]}_{i}.JPG")
+                logging.info(f"Skipping empty crop for {label}_{os.path.splitext(image_name)[0]}_{i}.JPG")
                 continue
 
             # Save cropped image inside the replicated folder structure
@@ -212,7 +213,7 @@ class ImageCropper():
             cropped_output_path = os.path.join(
                 cropped_output_dir, cropped_output_filename)
             cv2.imwrite(cropped_output_path, cropped)
-            print(f"Saved: {cropped_output_path}")
+            logging.info(f"Saved: {cropped_output_path}")
 
             # Add image information to the index
             index_file_writer.writerow([os.path.join(relative_path, cropped_output_filename), label, timestamp, cropped.shape[0], cropped.shape[1]])
