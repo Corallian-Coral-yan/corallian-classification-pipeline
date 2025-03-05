@@ -76,7 +76,7 @@ class ResNetASPPClassifier(nn.Module):
             self.atrous_rates = aspp_config.get("AtrousRates", [6, 12, 18])
 
             logging.info(f"Using ASPP with {self.aspp_in_channels} in channels and {self.aspp_out_channels} out channels and rates {self.atrous_rates}")
-            self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates)
+            self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates).to(self.device)
         else:
             logging.info("ASPP Disabled. . .")
             self.aspp_out_channels = 512  # Default output channels from ResNet
@@ -85,7 +85,7 @@ class ResNetASPPClassifier(nn.Module):
     
         if self.visual_embedding_enabled:
             logging.info(f"Using Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
-            self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256)
+            self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256).to(self.device)
 
         # Global Average Pooling + Fully Connected Classifier
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
