@@ -47,6 +47,7 @@ module load anaconda
 mamba init
 mamba activate corallian-env
 python train.py
+nvidia-smi -q
 mamba deactivate
 
 ## Flush the TMPDIR.

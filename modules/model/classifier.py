@@ -79,7 +79,7 @@ class ResNetASPPClassifier(nn.Module):
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates).to(self.device)
         else:
             logging.info("ASPP Disabled. . .")
-            self.aspp_out_channels = 512  # Default output channels from ResNet
+            self.aspp_out_channels = 2048  # Default output channels from ResNet
         # Visual Embedding
         self.visual_embedding_enabled = self.config["model"]["visual_embedding"].get("EmbeddingEnabled", True)
     
