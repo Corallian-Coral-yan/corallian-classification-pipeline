@@ -1,6 +1,6 @@
 import gc
 import logging
-
+import wandb
 import numpy as np
 import torch
 import torch.nn as nn
@@ -98,7 +98,19 @@ class ResNetASPPClassifier(nn.Module):
                 lr=optim_config["SGDLearningRate"], 
                 weight_decay = optim_config["SGDWeightDecay"], 
                 momentum = optim_config["SGDMomentum"]
-            )  
+            ) 
+        elif optim_config["OptimizerName"] == "adam":
+            self.optimizer = torch.optim.Adam(
+                self.model.parameters(),
+                lr=optim_config["AdamLearningRate"],
+                weight_decay=optim_config["AdamWeightDecay"]
+            )
+        elif optim_config["OptimizerName"] == "adamw":
+            self.optimizer = torch.optim.AdamW(
+                self.model.parameters(),
+                lr=optim_config["AdamWLearningRate"],
+                weight_decay=optim_config["AdamWWeightDecay"]
+            )
         else:
             raise TypeError(f"Invalid Optimizer: {optim_config['OptimizerName']}")
         
@@ -193,6 +205,12 @@ class ResNetASPPClassifier(nn.Module):
                 loss.backward()
                 self.optimizer.step()
                 
+                wandb.log({
+                    "epoch": epoch,
+                    "batch": i,
+                    "loss": loss.item()
+                })
+
                 del images, labels, outputs
                 torch.cuda.empty_cache()
                 gc.collect()

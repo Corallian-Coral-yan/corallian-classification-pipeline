@@ -29,15 +29,19 @@ LossFunction = "cross-entropy" # currently, only cross-entropy loss is supported
 
 [training.model.aspp]
 ASPPEnabled = true
-ASPPInChannels = 512
+ASPPInChannels = 512  
 ASPPOutChannels = 256
 AtrousRates = [6, 12, 18]
 
 [training.model.optimizer]
-OptimizerName = "sgd"  # currently, only sgd is supported
+OptimizerName = "sgd"  # SGD, Adam, or AdamW
 SGDLearningRate = 0.01
 SGDWeightDecay = 0.001
 SGDMomentum = 0.9
+AdamLearningRate = 0.001
+AdamWeightDecay = 0
+AdamWLearningRate = 0.001
+AdamWWeightDecay = 0
 
 [training.model.visual_embedding]
 EmbeddingEnabled = true
@@ -50,3 +54,10 @@ DoTesting = true
 LogFormat = "[%(asctime)s] %(levelname)s:%(message)s"
 UseLogFile = false
 LogFile = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/pipeline.log"
+
+[wandb]
+runname = "Justin" # Set this to your name
+entity = "jace_dimalanta-de-la-salle-university" # Set this to your team name
+project = "corallian-pipeline" # Project name
+WANDB_API_KEY = "" # Add your API key here
+relogin = false # Set this to True if you've logged in before

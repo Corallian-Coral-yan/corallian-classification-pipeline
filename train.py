@@ -2,6 +2,8 @@ import os
 import tomllib
 from pathlib import Path
 import logging
+import wandb
+from datetime import datetime
 
 import pandas as pd
 
@@ -74,6 +76,14 @@ def main():
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
 
+    timestamp = datetime.now().strftime("%m%d%y-%H")
+    wandb.login(key=config['wandb']['WANDB_API_KEY'], relogin=config['wandb']['relogin'])
+    wandb.init(
+        entity=config['wandb']['entity'],
+        project=config['wandb']['project'], 
+        name = f"{config['wandb']['runname']}-{timestamp}", # Set run name
+        config=config, # Set config file
+    )
     logging_config = config["logging"]
 
     logging.basicConfig(
