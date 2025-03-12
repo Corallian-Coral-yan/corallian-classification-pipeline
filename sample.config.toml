@@ -9,7 +9,6 @@ InputRecurse = true
 [training]
 DoTraining = true
 DoValidation = true
-UseCachedModel = false
 SaveModel = true
 ResNetModel = 18                          # valid values: 18, 101
 ForceUseCuda = false

@@ -49,17 +49,7 @@ class ResNetASPPClassifier(nn.Module):
         else:
             raise TypeError("Invalid ResNet Configuration, must be 18 or 101")
         
-        # Cached model
-        if self.config["UseCachedModel"]:
-            logging.info(f"Loading cached model from {self.config['ModelFilepath']}...")
-            self.model = torch.load(self.config["ModelFilepath"], weights_only=False)
-            self.model.to(self.device)
-            self.model.eval()  # Set to evaluation mode
-
-            logging.info("Model loaded successfully!")
-            return
-        else:
-            self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
+        self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
             
         # Extract feature maps from ResNet (excluding last classification layers)
         self.feature_extractor = nn.Sequential(*list(self.model.children())[:-2])  # Keep only backbone
