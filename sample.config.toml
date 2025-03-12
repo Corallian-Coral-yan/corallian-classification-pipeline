@@ -20,7 +20,8 @@ ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pip
 [training.checkpoint]
 UseCheckpoints = true
 CheckpointFolder = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/checkpoints"
-CheckpointsPerEpoch = 1
+CheckpointsPerEpoch = 10
+LoadCheckpoint = false
 StartEpoch = 1
 StartCheckpoint = 1
 

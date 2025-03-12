@@ -109,20 +109,32 @@ class ResNetASPPClassifier(nn.Module):
             raise TypeError(f"Invalid Optimizer: {optim_config['OptimizerName']}")
         
         # Checkpointing Settings
+        self.use_checkpoints = False
+        self.load_checkpoints = False
+
+        self.start_epoch = 1
+        self.start_checkpoint = 1
+        self.checkpoints_per_epoch = 1
+        self.checkpoint_folder = None
+
         checkpoint_config = config["checkpoint"]
         if checkpoint_config["UseCheckpoints"]:
-            self.start_epoch = checkpoint_config["StartEpoch"]
-            self.start_checkpoint = checkpoint_config["StartCheckpoint"]
+            self.use_checkpoints = True
+
             self.checkpoints_per_epoch = checkpoint_config["CheckpointsPerEpoch"]
             self.checkpoint_folder = checkpoint_config["CheckpointFolder"]
 
             if not os.path.isdir(self.checkpoint_folder):
                 os.mkdir(self.checkpoint_folder)
-        else:
-            self.start_epoch = 1
-            self.start_checkpoint = 1
-            self.checkpoints_per_epoch = 1
-            self.checkpoint_folder = None
+
+            if checkpoint_config["LoadCheckpoint"]:
+                self.load_checkpoints = True
+
+                self.start_epoch = checkpoint_config["StartEpoch"]
+                self.start_checkpoint = checkpoint_config["StartCheckpoint"]
+
+                # load state_dict back into memory
+                self.resume_from_checkpoint(self.start_epoch, self.start_checkpoint)                
         
     def forward(self, x):
         x = self.feature_extractor(x)
@@ -198,11 +210,25 @@ class ResNetASPPClassifier(nn.Module):
         
         checkpoint_step = math.ceil(total_step / self.checkpoints_per_epoch)
         
-        for epoch in range(self.num_epochs):
+        for epoch in range(self.start_epoch - 1, self.num_epochs):
             checkpoint_batch_iter = itertools.count(start=checkpoint_step, step=checkpoint_step)
             next_checkpoint_batch = checkpoint_batch_iter.__next__()
 
+            # set next checkpoint batch based on starting checkpoint
+            if self.load_checkpoints and epoch == self.start_epoch - 1:
+                for _ in range(self.start_checkpoint - 1):
+                    next_checkpoint_batch = checkpoint_batch_iter.__next__()
+
+            logging.info(f"Next Checkpoint Batch: {next_checkpoint_batch}")
+
             for i, (images, labels) in enumerate(self.train_loader):  
+                
+                if (self.load_checkpoints 
+                        and epoch == self.start_epoch - 1 
+                        and i < (self.start_checkpoint - 1) * checkpoint_step):
+                    
+                    continue
+
                 logging.info(f"Epoch {epoch + 1}/{self.num_epochs} | Batch {i + 1}/{total_step}")
                 
                 # Move tensors to the configured device
@@ -250,15 +276,22 @@ class ResNetASPPClassifier(nn.Module):
             self.save()
 
     def save(self):
-        torch.save(self.model, self.config["ModelFilepath"])
+        torch.save(self, self.config["ModelFilepath"])
 
     def create_checkpoint(self, epoch_number, checkpoint_number):
         filepath = os.path.join(
             self.checkpoint_folder, 
             f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
         )
-        torch.save(self.model, filepath)
+        torch.save(self.state_dict(), filepath)
         return filepath
+    
+    def resume_from_checkpoint(self, epoch_number, checkpoint_number):
+        filepath = os.path.join(
+            self.checkpoint_folder, 
+            f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
+        )
+        self.load_state_dict(torch.load(filepath))
 
     def evaluate(self, data_loader, name=""):
         logging.info(f"Running evaluation on data loader {name}")
