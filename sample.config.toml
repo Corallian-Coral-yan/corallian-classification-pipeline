@@ -24,6 +24,9 @@ CheckpointsPerEpoch = 10
 LoadCheckpoint = false
 StartEpoch = 1
 StartCheckpoint = 1
+ReloadCheckpointOnECCError = true
+MaxRetriesOnECCError = "none"   # "none" or any integer are valid values, "none" means retry indefinitely
+
 
 [training.model]
 NumClasses = "auto"            # can be any number or "auto"

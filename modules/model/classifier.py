@@ -113,7 +113,7 @@ class ResNetASPPClassifier(nn.Module):
         self.load_checkpoints = False
 
         self.start_epoch = 1
-        self.start_checkpoint = 1
+        self.start_checkpoint = 0
         self.checkpoints_per_epoch = 1
         self.checkpoint_folder = None
 
@@ -134,7 +134,11 @@ class ResNetASPPClassifier(nn.Module):
                 self.start_checkpoint = checkpoint_config["StartCheckpoint"]
 
                 # load state_dict back into memory
-                self.resume_from_checkpoint(self.start_epoch, self.start_checkpoint)                
+                self.resume_from_checkpoint(self.start_epoch, self.start_checkpoint)    
+
+        # variables for crash recovery
+        self.current_epoch = 0
+        self.current_checkpoint = 0            
         
     def forward(self, x):
         x = self.feature_extractor(x)
@@ -203,7 +207,36 @@ class ResNetASPPClassifier(nn.Module):
     def assert_has_cuda(self):
         torch.zeros(1).cuda()
 
-    def train(self):
+    def train(self, retries=0):
+        if self.use_checkpoints:
+            max_retries = self.config["checkpoint"]["MaxRetriesOnECCError"]
+            if max_retries == "none":
+                max_retries = None
+            
+        try:
+            self._train()
+        except RuntimeError as e:
+            if "uncorrectable ecc error encountered" in str(e).lower():
+                if self.use_checkpoints and max_retries is not None and retries == max_retries:
+                    logging.fatal(f"ECC errors encountered {retries + 1} time(s), quitting")
+                    raise e
+                else:
+                    logging.error(f"ECC errors encountered {retries + 1} time(s), restarting")
+                    logging.error(str(e))
+
+                    # load the latest checkpoint
+                    logging.info(f"{self.current_checkpoint} {self.current_epoch}")
+
+                    if self.current_checkpoint != 0 and self.current_epoch != 0:
+                        self.resume_from_checkpoint(self.current_epoch, self.current_checkpoint)
+                        self.start_epoch = self.current_epoch
+                        self.start_checkpoint = self.current_checkpoint
+
+                    self.train(retries=retries + 1)
+            else:
+                raise e
+        
+    def _train(self):            
         # Train the model
         total_step = len(self.train_loader)
         logging.info("Beginning training")
@@ -215,17 +248,14 @@ class ResNetASPPClassifier(nn.Module):
             next_checkpoint_batch = checkpoint_batch_iter.__next__()
 
             # set next checkpoint batch based on starting checkpoint
-            if self.load_checkpoints and epoch == self.start_epoch - 1:
-                for _ in range(self.start_checkpoint - 1):
+            if self.use_checkpoints and epoch == self.start_epoch - 1:
+                for _ in range(self.start_checkpoint):
                     next_checkpoint_batch = checkpoint_batch_iter.__next__()
 
-            logging.info(f"Next Checkpoint Batch: {next_checkpoint_batch}")
-
-            for i, (images, labels) in enumerate(self.train_loader):  
-                
-                if (self.load_checkpoints 
+            for i, (images, labels) in enumerate(self.train_loader):                  
+                if (self.use_checkpoints 
                         and epoch == self.start_epoch - 1 
-                        and i < (self.start_checkpoint - 1) * checkpoint_step):
+                        and i < (self.start_checkpoint * checkpoint_step)):
                     
                     continue
 
@@ -262,6 +292,9 @@ class ResNetASPPClassifier(nn.Module):
                     checkpoint_filename = self.create_checkpoint(epoch + 1, checkpoint_number)
                     next_checkpoint_batch = checkpoint_batch_iter.__next__()
 
+                    self.current_epoch = epoch + 1
+                    self.current_checkpoint = checkpoint_number
+
                     logging.info(f"Generated checkpoint at {checkpoint_filename}")
 
             logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
@@ -284,6 +317,7 @@ class ResNetASPPClassifier(nn.Module):
             f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
         )
         torch.save(self.state_dict(), filepath)
+        logging.info(f"Successfully saved state_dict to checkpoint {filepath}")
         return filepath
     
     def resume_from_checkpoint(self, epoch_number, checkpoint_number):
@@ -292,6 +326,7 @@ class ResNetASPPClassifier(nn.Module):
             f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
         )
         self.load_state_dict(torch.load(filepath))
+        logging.info(f"Successfully loaded state_dict from checkpoint {filepath}")
 
     def evaluate(self, data_loader, name=""):
         logging.info(f"Running evaluation on data loader {name}")
