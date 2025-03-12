@@ -50,9 +50,7 @@ def train(train_config, test_config):
                 # Debug: Check label dtypes
                 logging.info(f"Label dtype: {labels.dtype}")
 
-        # Loading cached model is for eval purposes, not for retraining
-        if not train_config["UseCachedModel"]:
-            classifier.train()
+        classifier.train()
 
         if train_config["DoValidation"]:
             classifier.validate()     # Run evaluation after loading cached model

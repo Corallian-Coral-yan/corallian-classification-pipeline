@@ -1,5 +1,9 @@
 import gc
 import logging
+import itertools
+import math
+import os
+
 import wandb
 import numpy as np
 import torch
@@ -104,6 +108,22 @@ class ResNetASPPClassifier(nn.Module):
         else:
             raise TypeError(f"Invalid Optimizer: {optim_config['OptimizerName']}")
         
+        # Checkpointing Settings
+        checkpoint_config = config["checkpoint"]
+        if checkpoint_config["UseCheckpoints"]:
+            self.start_epoch = checkpoint_config["StartEpoch"]
+            self.start_checkpoint = checkpoint_config["StartCheckpoint"]
+            self.checkpoints_per_epoch = checkpoint_config["CheckpointsPerEpoch"]
+            self.checkpoint_folder = checkpoint_config["CheckpointFolder"]
+
+            if not os.path.isdir(self.checkpoint_folder):
+                os.mkdir(self.checkpoint_folder)
+        else:
+            self.start_epoch = 1
+            self.start_checkpoint = 1
+            self.checkpoints_per_epoch = 1
+            self.checkpoint_folder = None
+        
     def forward(self, x):
         x = self.feature_extractor(x)
         
@@ -176,7 +196,12 @@ class ResNetASPPClassifier(nn.Module):
         total_step = len(self.train_loader)
         logging.info("Beginning training")
         
+        checkpoint_step = math.ceil(total_step / self.checkpoints_per_epoch)
+        
         for epoch in range(self.num_epochs):
+            checkpoint_batch_iter = itertools.count(start=checkpoint_step, step=checkpoint_step)
+            next_checkpoint_batch = checkpoint_batch_iter.__next__()
+
             for i, (images, labels) in enumerate(self.train_loader):  
                 logging.info(f"Epoch {epoch + 1}/{self.num_epochs} | Batch {i + 1}/{total_step}")
                 
@@ -205,8 +230,17 @@ class ResNetASPPClassifier(nn.Module):
                 torch.cuda.empty_cache()
                 gc.collect()
 
+                # Generate checkpoint if enough epochs have passed
+                if self.config["checkpoint"]["UseCheckpoints"] and (i + 1 >= next_checkpoint_batch or i == total_step - 1):
+                    checkpoint_number = next_checkpoint_batch // checkpoint_step
+                    checkpoint_filename = self.create_checkpoint(epoch + 1, checkpoint_number)
+                    next_checkpoint_batch = checkpoint_batch_iter.__next__()
+
+                    logging.info(f"Generated checkpoint at {checkpoint_filename}")
+
             logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
                         .format(epoch+1, self.num_epochs, loss.item()))
+            
 
         #Validation
         self.evaluate(self.valid_loader, "valid_loader")
@@ -217,6 +251,14 @@ class ResNetASPPClassifier(nn.Module):
 
     def save(self):
         torch.save(self.model, self.config["ModelFilepath"])
+
+    def create_checkpoint(self, epoch_number, checkpoint_number):
+        filepath = os.path.join(
+            self.checkpoint_folder, 
+            f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
+        )
+        torch.save(self.model, filepath)
+        return filepath
 
     def evaluate(self, data_loader, name=""):
         logging.info(f"Running evaluation on data loader {name}")

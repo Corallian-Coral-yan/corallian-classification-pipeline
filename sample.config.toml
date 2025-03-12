@@ -17,6 +17,13 @@ ImageDir = "D:/CROPPED-CORALS"
 
 ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/resnet18-aspp.pt"
 
+[training.checkpoint]
+UseCheckpoints = true
+CheckpointFolder = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/checkpoints"
+CheckpointsPerEpoch = 1
+StartEpoch = 1
+StartCheckpoint = 1
+
 [training.model]
 NumClasses = "auto"            # can be any number or "auto"
 NumEpochs = 20
