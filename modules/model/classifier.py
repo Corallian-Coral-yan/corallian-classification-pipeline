@@ -8,7 +8,7 @@ import wandb
 import numpy as np
 import torch
 import torch.nn as nn
-from .metrics import compute_metrics
+from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 
@@ -332,10 +332,11 @@ class ResNetASPPClassifier(nn.Module):
         logging.info(f"Running evaluation on data loader {name}")
 
         with torch.no_grad():
-            y_true = []
-            y_pred = []
             correct = 0
             total = 0
+
+            y_true = []  # Store true labels
+            y_pred = []  # Store predicted labels
 
             total_step = len(data_loader)
             for i, (images, labels) in enumerate(data_loader):
@@ -347,25 +348,18 @@ class ResNetASPPClassifier(nn.Module):
 
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-                y_true.extend(labels.cpu().numpy())
+
+                y_true.extend(labels.cpu().numpy())  
                 y_pred.extend(predicted.cpu().numpy())
 
                 del images, labels, outputs
 
-            logging.info("y_true:", y_true[:10])  # Show first 10 labels
-            logging.info("y_pred:", y_pred[:10])  # Show first 10 predictions
-            logging.info("Unique labels in y_true:", set(y_true))
-            logging.info("Unique labels in y_pred:", set(y_pred))
-
             accuracy = 100 * correct / total
             logging.info(f'Accuracy: {accuracy:.2f}%')
 
-            # Compute precision, recall, F1-score
-            metrics = compute_metrics(y_true, y_pred)
-            logging.info("Metrics dictionary:", metrics)  # Debugging step
-            logging.info(f'Precision: {metrics["precision"]:.4f}')
-            logging.info(f'Recall: {metrics["recall"]:.4f}')
-            logging.info(f'F1 Score: {metrics["f1_score"]:.4f}')
+            conf_matrix =  compute_confusion_matrix(y_true, y_pred)
+            logging.info(f'Confusion Matrix:\n{conf_matrix}')
+
 
     def validate(self):
         self.evaluate(self.valid_loader, "valid_loader")  

@@ -1,6 +1,6 @@
 import logging
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 import numpy as np
 
 def compute_metrics(y_true, y_pred):
@@ -22,3 +22,13 @@ def compute_metrics(y_true, y_pred):
         metrics["f1_score"] = 0.0  # Ensure it always exists
 
     return metrics
+
+
+def compute_confusion_matrix(y_true, y_pred):
+    """
+    Compute confusion matrix
+    :param y_true: ground truth labels
+    :param y_pred: predicted labels
+    :return: confusion matrix
+    """
+    return confusion_matrix(y_true, y_pred)
