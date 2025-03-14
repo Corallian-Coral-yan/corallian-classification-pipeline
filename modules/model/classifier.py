@@ -343,7 +343,7 @@ class ResNetASPPClassifier(nn.Module):
                 logging.info(f"Evaluating | Batch {i + 1}/{total_step}")
                 images = images.to(self.device)
                 labels = labels.to(self.device)
-                outputs = self.model(images)
+                outputs = self(images)
                 _, predicted = torch.max(outputs.data, 1)
 
                 total += labels.size(0)
