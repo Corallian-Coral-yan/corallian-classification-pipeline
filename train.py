@@ -66,6 +66,7 @@ def train(train_config, test_config):
 
         if test_config["DoTesting"]:
             classifier.test()
+
         
 
 def get_num_classes(annotations_filepath):
@@ -101,6 +102,11 @@ def main():
     )
 
     full_train(config)
+
+    if logging_config["UseLogFile"]:
+        artifact = wandb.Artifact('pipeline-logs', type='logs')
+        artifact.add_file(logging_config["LogFile"])
+        wandb.log_artifact(artifact)
 
 if __name__ == "__main__":
     main()

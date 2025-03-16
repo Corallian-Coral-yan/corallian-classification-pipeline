@@ -8,6 +8,8 @@ import wandb
 import numpy as np
 import torch
 import torch.nn as nn
+import pandas as pd
+import wandb.sklearn
 from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -360,16 +362,40 @@ class ResNetASPPClassifier(nn.Module):
                 del images, labels, outputs
 
             accuracy = 100 * correct / total
-            logging.info(f'Accuracy: {accuracy:.2f}%')
 
+            wandb.log({
+                f"{name}_accuracy": accuracy
+            })
+
+            logging.info(f'{name}_Accuracy: {accuracy:.2f}%')
+
+            if name == "valid_loader":
+                dataset = self.valid_loader.dataset
+                idx_to_class = dataset.idx_to_class
+            else:
+                dataset = self.test_loader.dataset
+                idx_to_class = dataset.idx_to_class
+            labels = [idx_to_class[i] for i in range(conf_matrix.shape[0])]
+
+            # Compute confusion matrix and pass it to formatter
             conf_matrix =  compute_confusion_matrix(y_true, y_pred)
-
-            # print full matrix
-            with np.printoptions(threshold=np.inf):
-                logging.info(f'Confusion Matrix:\n{conf_matrix}')
+            self.format_confusion_matrix(conf_matrix, labels, name=name)
 
     def validate(self):
         self.evaluate(self.valid_loader, "valid_loader")  
 
     def test(self):
         return self.evaluate(self.test_loader, "test_loader")
+    
+    def format_confusion_matrix(self, conf_matrix, labels, name=""):
+        df = pd.DataFrame(conf_matrix, index=[f"True_{label}" for label in labels], columns=[f"Pred_{label}" for label in labels])
+        logging.info(f"\n{name} Confusion Matrix:\n{df.to_string()}")
+
+        # Log confusion matrix to W&B as table and artifact        
+        table = wandb.Table(dataframe=df)
+        wandb.log({f"{name}_confusion_matrix_table": table})
+        df.to_csv(f"{name}_confusion_matrix.csv")
+
+        artifact = wandb.Artifact(f"{name}-confusion-matrix", type="confusion_matrix")
+        artifact.add_file(f"{name}_confusion_matrix.csv")
+        wandb.log_artifact(artifact)

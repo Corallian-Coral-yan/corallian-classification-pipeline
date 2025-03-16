@@ -28,6 +28,9 @@ class ImageDataset(Dataset):
         self.le.fit(raw_labels["annotation"])
         raw_labels["annotation"] = self.le.transform(raw_labels["annotation"])
 
+        self.class_to_idx = {class_name: idx for idx, class_name in enumerate(self.le.classes_)}
+        self.idx_to_class = {idx: class_name for idx, class_name in enumerate(self.le.classes_)}
+
         # paths in annotations file are encoded in windows format
         # change them to posix if necessary
         if os.name != "nt":
