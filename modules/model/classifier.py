@@ -362,8 +362,10 @@ class ResNetASPPClassifier(nn.Module):
             logging.info(f'Accuracy: {accuracy:.2f}%')
 
             conf_matrix =  compute_confusion_matrix(y_true, y_pred)
-            logging.info(f'Confusion Matrix:\n{conf_matrix}')
 
+            # print full matrix
+            with np.printoptions(threshold=np.inf):
+                logging.info(f'Confusion Matrix:\n{conf_matrix}')
 
     def validate(self):
         self.evaluate(self.valid_loader, "valid_loader")  
