@@ -49,13 +49,18 @@ def train(train_config, test_config):
             if batch_idx == 0:
                 # Debug: Check label dtypes
                 logging.info(f"Label dtype: {labels.dtype}")
-
+                
         if train_config["LoadPretrainedModel"]:
             classifier.load_pretrained_model(train_config["PretrainedModelFilepath"])
+        else:
+            logging.info("No pretrained model loaded")
 
         if train_config["DoTraining"]:
             classifier.train()
+        else:
+            logging.info("Training skipped")
 
+            
         if train_config["DoValidation"]:
             classifier.validate()     # Run evaluation after loading cached model
 
