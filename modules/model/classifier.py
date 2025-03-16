@@ -375,10 +375,11 @@ class ResNetASPPClassifier(nn.Module):
             else:
                 dataset = self.test_loader.dataset
                 idx_to_class = dataset.idx_to_class
-            labels = [idx_to_class[i] for i in range(conf_matrix.shape[0])]
 
             # Compute confusion matrix and pass it to formatter
             conf_matrix =  compute_confusion_matrix(y_true, y_pred)
+            
+            labels = [idx_to_class[i] for i in range(conf_matrix.shape[0])]
             self.format_confusion_matrix(conf_matrix, labels, name=name)
 
     def validate(self):
