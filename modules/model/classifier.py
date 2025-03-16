@@ -328,6 +328,10 @@ class ResNetASPPClassifier(nn.Module):
         self.load_state_dict(torch.load(filepath))
         logging.info(f"Successfully loaded state_dict from checkpoint {filepath}")
 
+    def load_pretrained_model(self, filepath):
+        self.load_state_dict(torch.load(filepath))
+        logging.info(f"Successfully loaded state_dict from pretrained model {filepath}")
+
     def evaluate(self, data_loader, name=""):
         logging.info(f"Running evaluation on data loader {name}")
 

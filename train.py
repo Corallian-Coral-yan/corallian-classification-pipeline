@@ -50,7 +50,11 @@ def train(train_config, test_config):
                 # Debug: Check label dtypes
                 logging.info(f"Label dtype: {labels.dtype}")
 
-        classifier.train()
+        if train_config["LoadPretrainedModel"]:
+            classifier.load_pretrained_model(train_config["PretrainedModelFilepath"])
+
+        if train_config["DoTraining"]:
+            classifier.train()
 
         if train_config["DoValidation"]:
             classifier.validate()     # Run evaluation after loading cached model
