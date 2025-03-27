@@ -127,13 +127,13 @@ Resnet18-HDC
 """
 
 class ResNet18_HDC(nn.Module):
-    def __init__(self, num_classes=10, verbose=False):
+    def __init__(self, num_classes=10, verbose=False, in_channels=3):
         super().__init__()
 
         self.verbose = verbose
         self.layers = \
         [
-            conv_bn_ac(in_channels=3, out_channels=64, kernel_size=3, stride=2, padding=1),
+            conv_bn_ac(in_channels=in_channels, out_channels=64, kernel_size=3, stride=2, padding=1),
             conv_bn_ac(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
             conv_bn_ac(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -181,13 +181,13 @@ Resnet101-HDC
 """
 
 class ResNet101_HDC(nn.Module):
-    def __init__(self, num_classes=10, verbose=False):
+    def __init__(self, num_classes=10, verbose=False, in_channels=3):
         super().__init__()
 
         self.verbose = verbose
         self.layers = \
         [
-            conv_bn_ac(in_channels=3, out_channels=64, kernel_size=3, stride=2, padding=1),
+            conv_bn_ac(in_channels=in_channels, out_channels=64, kernel_size=3, stride=2, padding=1),
             conv_bn_ac(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
             conv_bn_ac(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
             nn.MaxPool2d(kernel_size=3, stride=2),

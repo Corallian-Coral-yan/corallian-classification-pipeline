@@ -32,12 +32,13 @@ MaxRetriesOnECCError = "none"   # "none" or any integer are valid values, "none"
 
 [training.model]
 NumClasses = "auto"            # can be any number or "auto"
-NumEpochs = 20
+NumEpochs = 1
 BatchSize = 16
 Verbose = false
 RandomSeed = 42
 ValidationSplit = 0.1          # 10%
 LossFunction = "cross-entropy" # currently, only cross-entropy loss is supported
+ReadInputAsGrayscale = true
 
 [training.model.aspp]
 ASPPEnabled = true

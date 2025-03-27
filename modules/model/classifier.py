@@ -47,6 +47,9 @@ class ResNetASPPClassifier(nn.Module):
         else:
             raise TypeError(f"Invalid Loss Function: {model_config['LossFunction']}")
 
+        # Image Transforms
+        self.grayscale = model_config["ReadInputAsGrayscale"]
+
         # ResNet backbone
         if self.config["ResNetModel"] == 18:
             resnet_model = ResNet18_HDC
@@ -55,7 +58,11 @@ class ResNetASPPClassifier(nn.Module):
         else:
             raise TypeError("Invalid ResNet Configuration, must be 18 or 101")
         
-        self.model = resnet_model(num_classes=self.num_classes, verbose=self.model_verbose).to(self.device)
+        self.model = resnet_model(
+            num_classes=self.num_classes,
+            verbose=self.model_verbose,
+            in_channels=1 if self.grayscale else 3
+        ).to(self.device)
             
         # Extract feature maps from ResNet (excluding last classification layers)
         self.feature_extractor = nn.Sequential(*list(self.model.children())[:-2])  # Keep only backbone
@@ -164,7 +171,10 @@ class ResNetASPPClassifier(nn.Module):
 
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False):
         # define transforms
-        transform = transforms.ToTensor()
+        if self.grayscale:
+            transform = transforms.Compose([transforms.Grayscale(), transforms.ToTensor()])
+        else:
+            transform = transforms.ToTensor()
         target_transform = None
 
         if test:
