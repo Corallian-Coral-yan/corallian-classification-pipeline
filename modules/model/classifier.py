@@ -3,6 +3,7 @@ import logging
 import itertools
 import math
 import os
+import traceback
 
 import wandb
 import numpy as np
@@ -219,34 +220,37 @@ class ResNetASPPClassifier(nn.Module):
     def assert_has_cuda(self):
         torch.zeros(1).cuda()
 
-    def train(self, retries=0):
+    def train(self):
         if self.use_checkpoints:
             max_retries = self.config["checkpoint"]["MaxRetriesOnECCError"]
             if max_retries == "none":
                 max_retries = None
             
-        try:
-            self._train()
-        except RuntimeError as e:
-            if "uncorrectable ecc error encountered" in str(e).lower():
-                if self.use_checkpoints and max_retries is not None and retries == max_retries:
-                    logging.fatal(f"ECC errors encountered {retries + 1} time(s), quitting")
-                    raise e
-                else:
-                    logging.error(f"ECC errors encountered {retries + 1} time(s), restarting")
-                    logging.error(str(e))
+        retries = 0
 
-                    # load the latest checkpoint
+        while max_retries is None or max_retries == retries:
+            try:
+                # load the latest checkpoint, but only if already retried
+                if retries > 0 and self.current_checkpoint != 0 and self.current_epoch != 0:
                     logging.info(f"{self.current_checkpoint} {self.current_epoch}")
 
-                    if self.current_checkpoint != 0 and self.current_epoch != 0:
-                        self.resume_from_checkpoint(self.current_epoch, self.current_checkpoint)
-                        self.start_epoch = self.current_epoch
-                        self.start_checkpoint = self.current_checkpoint
+                    self.resume_from_checkpoint(self.current_epoch, self.current_checkpoint)
+                    self.start_epoch = self.current_epoch
+                    self.start_checkpoint = self.current_checkpoint
 
-                    self.train(retries=retries + 1)
-            else:
-                raise e
+                self._train()
+            except RuntimeError as e:
+                if "uncorrectable ecc error encountered" in str(e).lower():
+                    if self.use_checkpoints and max_retries is not None and retries == max_retries:
+                        logging.fatal(f"ECC errors encountered {retries + 1} time(s), quitting")
+                        raise e
+                    else:
+                        logging.error(f"ECC errors encountered {retries + 1} time(s), restarting")
+                        logging.error(traceback.format_exc())
+                else:
+                    raise e
+            finally:
+                retries += 1
         
     def _train(self):            
         # Train the model
