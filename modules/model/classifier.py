@@ -255,6 +255,9 @@ class ResNetASPPClassifier(nn.Module):
         
         checkpoint_step = math.ceil(total_step / self.checkpoints_per_epoch)
         
+        # workaround for ensuring checkpoints don't crash
+        loss = None
+
         for epoch in range(self.start_epoch - 1, self.num_epochs):
             checkpoint_batch_iter = itertools.count(start=checkpoint_step, step=checkpoint_step)
             next_checkpoint_batch = checkpoint_batch_iter.__next__()
@@ -309,8 +312,10 @@ class ResNetASPPClassifier(nn.Module):
 
                     logging.info(f"Generated checkpoint at {checkpoint_filename}")
 
-            logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
-                        .format(epoch+1, self.num_epochs, loss.item()))
+
+            if loss:
+                logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
+                            .format(epoch+1, self.num_epochs, loss.item()))
             
 
         #Validation
