@@ -228,7 +228,7 @@ class ResNetASPPClassifier(nn.Module):
             
         retries = 0
 
-        while max_retries is None or max_retries == retries:
+        while max_retries is None or max_retries < retries:
             try:
                 # load the latest checkpoint, but only if already retried
                 if retries > 0 and self.current_checkpoint != 0 and self.current_epoch != 0:
