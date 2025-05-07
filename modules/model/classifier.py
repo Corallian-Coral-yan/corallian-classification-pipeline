@@ -338,7 +338,7 @@ class ResNetASPPClassifier(nn.Module):
             self.save()
 
     def save(self):
-        torch.save(self, self.config["PretrainedModelFilepath"])
+        torch.save(self, self.config["ModelFilepath"])
 
     def create_checkpoint(self, epoch_number, checkpoint_number):
         filepath = os.path.join(
