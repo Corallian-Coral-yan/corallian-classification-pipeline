@@ -16,6 +16,7 @@ ResNetModel = 18                          # valid values: 18, 101
 ForceUseCuda = false
 IndexFile = "D:/CROPPED-CORALS/index.csv"
 ImageDir = "D:/CROPPED-CORALS"
+LabelColumn = "annotation"  # "annotation": all coral annotations, "aa_ignore": AA vs not AA
 
 ModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/resnet18-aspp.pt"
 

@@ -83,7 +83,7 @@ class ResNetASPPClassifier(nn.Module):
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates).to(self.device)
         else:
             logging.info("ASPP Disabled. . .")
-            self.aspp_out_channels = 2048  # Default output channels from ResNet
+            self.aspp_out_channels = 512 if self.config["ResNetModel"] == 18 else 2048  # Default output channels from ResNet
         # Visual Embedding
         self.visual_embedding_enabled = self.config["model"]["visual_embedding"].get("EmbeddingEnabled", True)
     
@@ -170,7 +170,7 @@ class ResNetASPPClassifier(nn.Module):
         self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True)
         logging.info("Successfully created data loaders")
 
-    def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False):
+    def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
         # define transforms
         if self.grayscale:
             transform = transforms.Compose([transforms.Grayscale(), transforms.ToTensor()])
@@ -184,7 +184,8 @@ class ResNetASPPClassifier(nn.Module):
                 self.img_dir, 
                 transform=transform, 
                 target_transform=target_transform, 
-                random_state=random_seed
+                random_state=random_seed,
+                label_column=label_column
             )
 
             data_loader = torch.utils.data.DataLoader(
@@ -194,8 +195,8 @@ class ResNetASPPClassifier(nn.Module):
             return data_loader
 
         # load the dataset
-        train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed)
-        valid_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed)
+        train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
+        valid_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
 
         num_train = len(train_dataset)
         indices = list(range(num_train))
@@ -237,8 +238,10 @@ class ResNetASPPClassifier(nn.Module):
                     self.resume_from_checkpoint(self.current_epoch, self.current_checkpoint)
                     self.start_epoch = self.current_epoch
                     self.start_checkpoint = self.current_checkpoint
-
+                    
                 self._train()
+
+                return
             except RuntimeError as e:
                 if "uncorrectable ecc error encountered" in str(e).lower():
                     if self.use_checkpoints and max_retries is not None and retries == max_retries:
@@ -323,7 +326,7 @@ class ResNetASPPClassifier(nn.Module):
             
 
         #Validation
-        self.evaluate(self.valid_loader, "valid_loader")
+        self.validate()
               
         if self.config["SaveModel"]:
             logging.info("Saving model. . .")

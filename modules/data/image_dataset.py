@@ -9,12 +9,13 @@ from PIL import Image
 import logging
 
 class ImageDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False):
+    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation"):
         self.annotations_file = annotations_file
         self.img_dir = img_dir
         self.verbose = verbose
         self.transform = transform
         self.target_transform = target_transform
+        self.label_column = label_column
         self.le = LabelEncoder()
 
         raw_labels = pd.read_csv(annotations_file)
@@ -25,8 +26,8 @@ class ImageDataset(Dataset):
         )
 
         # label encode categorical labels
-        self.le.fit(raw_labels["annotation"])
-        raw_labels["annotation"] = self.le.transform(raw_labels["annotation"])
+        self.le.fit(raw_labels[self.label_column])
+        raw_labels[self.label_column] = self.le.transform(raw_labels[self.label_column])
 
         self.class_to_idx = {class_name: idx for idx, class_name in enumerate(self.le.classes_)}
         self.idx_to_class = {idx: class_name for idx, class_name in enumerate(self.le.classes_)}
@@ -55,7 +56,7 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         image = Image.open(img_path)
-        label = self.img_labels.iloc[idx, 1]
+        label = self.img_labels.iloc[idx][self.label_column]
 
         if self.transform:
             image = self.transform(image)
