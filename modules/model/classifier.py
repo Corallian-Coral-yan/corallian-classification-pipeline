@@ -42,6 +42,11 @@ class ResNetASPPClassifier(nn.Module):
         self.random_seed = model_config["RandomSeed"]
         self.validation_split = model_config["ValidationSplit"]
 
+        if model_config["LabelColumn"] not in ["annotation", "aa_ignore"]:
+            raise TypeError(f"Invalid label column: {model_config["LabelColumn"]}")
+        self.label_column = model_config["LabelColumn"]
+        logging.info(f"Label Column: {self.label_column}")
+
         # Loss function
         if model_config["LossFunction"] == "cross-entropy":
             self.criterion = nn.CrossEntropyLoss()
@@ -166,8 +171,8 @@ class ResNetASPPClassifier(nn.Module):
         return x
 
     def load_data(self):
-        self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split)
-        self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True)
+        self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split, label_column=self.label_column)
+        self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True, label_column=self.label_column)
         logging.info("Successfully created data loaders")
 
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
