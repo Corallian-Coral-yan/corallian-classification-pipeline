@@ -60,12 +60,8 @@ def train(train_config, test_config):
         else:
             logging.info("Training skipped")
 
-            
-        if train_config["DoValidation"]:
-            classifier.validate()     # Run evaluation after loading cached model
-
         if test_config["DoTesting"]:
-            classifier.test()
+            classifier.test(load_best_model=True)
 
         
 

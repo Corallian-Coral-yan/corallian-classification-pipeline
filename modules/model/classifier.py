@@ -14,6 +14,7 @@ import wandb.sklearn
 from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
+from sklearn.metrics import precision_recall_fscore_support
 
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP
@@ -33,7 +34,7 @@ class ResNetASPPClassifier(nn.Module):
 
         self.annotations_file = self.config["IndexFile"]
         self.img_dir = self.config["ImageDir"]
-            
+                    
         model_config = self.config["model"]
         self.num_classes = model_config["NumClasses"]
         self.num_epochs = model_config["NumEpochs"]
@@ -95,6 +96,8 @@ class ResNetASPPClassifier(nn.Module):
         if self.visual_embedding_enabled:
             logging.info(f"Using Visual Embedding with {self.aspp_out_channels} in channels and 256 out channels")
             self.visual_embedding = VisualEmbedding(in_channels=self.aspp_out_channels, embedding_dim=256).to(self.device)
+        else:
+            logging.info("Visual Embedding Disabled. . .")
 
         # Global Average Pooling + Fully Connected Classifier
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1)).to(self.device)
@@ -270,6 +273,15 @@ class ResNetASPPClassifier(nn.Module):
         # workaround for ensuring checkpoints don't crash
         loss = None
 
+        # monitor which epoch does the best, then test on that
+        self.best_accuracy = 0
+        self.best_epoch = None
+
+        # include the current model if testing on a checkpoint
+        if self.load_checkpoints:
+            self.best_accuracy, _, _, _ = self.validate()
+            self.best_epoch = self.start_epochs
+            
         for epoch in range(self.start_epoch - 1, self.num_epochs):
             checkpoint_batch_iter = itertools.count(start=checkpoint_step, step=checkpoint_step)
             next_checkpoint_batch = checkpoint_batch_iter.__next__()
@@ -287,7 +299,7 @@ class ResNetASPPClassifier(nn.Module):
                     continue
 
                 logging.info(f"Epoch {epoch + 1}/{self.num_epochs} | Batch {i + 1}/{total_step}")
-                
+
                 # Move tensors to the configured device
                 images = images.float().to(self.device)
                 labels = labels.to(self.device).long()
@@ -328,6 +340,13 @@ class ResNetASPPClassifier(nn.Module):
             if loss:
                 logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
                             .format(epoch+1, self.num_epochs, loss.item()))
+                
+                accuracy, conf_matrix, (precision, recall, f1) = self.validate()
+                if accuracy > self.best_accuracy:
+                    self.best_epoch = epoch + 1
+                    self.best_accuracy = accuracy
+
+                logging.info(f"Best epoch so far: {self.best_epoch} with accuracy {self.best_accuracy}")
               
         if self.config["SaveModel"]:
             logging.info("Saving model. . .")
@@ -392,6 +411,14 @@ class ResNetASPPClassifier(nn.Module):
 
             logging.info(f'{name}_Accuracy: {accuracy:.2f}%')
 
+
+            # Show precision, recall, f1 score if exactly 2 classes
+            if self.num_classes == 2:
+                precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred)
+                logging.info(f"{name}_Precision: {precision}")
+                logging.info(f"{name}_Recall: {recall}")
+                logging.info(f"{name}_F1_score: {f1}")
+
             if name == "valid_loader":
                 dataset = self.valid_loader.dataset
                 idx_to_class = dataset.idx_to_class
@@ -405,10 +432,16 @@ class ResNetASPPClassifier(nn.Module):
             labels = [idx_to_class[i] for i in range(conf_matrix.shape[0])]
             self.format_confusion_matrix(conf_matrix, labels, name=name)
 
-    def validate(self):
-        self.evaluate(self.valid_loader, "valid_loader")  
+            return accuracy, conf_matrix, (precision, recall, f1) if self.num_classes == 2 else (None, None, None)
 
-    def test(self):
+
+    def validate(self):
+        return self.evaluate(self.valid_loader, "valid_loader")  
+
+    def test(self, load_best_model=False):
+        if load_best_model:
+            self.resume_from_checkpoint(self.best_epoch, self.checkpoints_per_epoch)
+
         return self.evaluate(self.test_loader, "test_loader")
     
     def format_confusion_matrix(self, conf_matrix, labels, name=""):
