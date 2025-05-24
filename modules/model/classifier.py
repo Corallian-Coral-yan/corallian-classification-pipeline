@@ -328,10 +328,6 @@ class ResNetASPPClassifier(nn.Module):
             if loss:
                 logging.info ('Epoch [{}/{}], Loss: {:.4f}' 
                             .format(epoch+1, self.num_epochs, loss.item()))
-            
-
-        #Validation
-        self.validate()
               
         if self.config["SaveModel"]:
             logging.info("Saving model. . .")
