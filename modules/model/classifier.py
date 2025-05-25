@@ -415,9 +415,18 @@ class ResNetASPPClassifier(nn.Module):
             # Show precision, recall, f1 score if exactly 2 classes
             if self.num_classes == 2:
                 precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred)
+                # the function returns precision/recall/f1 for both positive and negative cases
+                # Only return for positive case
+                precision, recall, f1 = precision[-1], recall[-1], f1[-1]
                 logging.info(f"{name}_Precision: {precision}")
                 logging.info(f"{name}_Recall: {recall}")
                 logging.info(f"{name}_F1_score: {f1}")
+
+                wandb.log({
+                    f"{name}_Precision": precision,
+                    f"{name}_Recall": recall,
+                    f"{name}_F1_score": f1
+                })
 
             if name == "valid_loader":
                 dataset = self.valid_loader.dataset
