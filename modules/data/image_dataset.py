@@ -9,7 +9,7 @@ from PIL import Image
 import logging
 
 class ImageDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation", label_column="annotation"):
+    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation"):
         self.annotations_file = annotations_file
         self.img_dir = img_dir
         self.verbose = verbose
@@ -26,6 +26,7 @@ class ImageDataset(Dataset):
         )
 
         # Filter out AA labels BEFORE encoding
+    
         raw_labels = raw_labels[raw_labels[self.label_column] != "AA"]
         assert "AA" not in raw_labels[self.label_column].values, "'AA' still present after filtering"
 
