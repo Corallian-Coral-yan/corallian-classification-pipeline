@@ -15,6 +15,7 @@ from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import confusion_matrix 
 
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP

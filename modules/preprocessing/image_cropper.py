@@ -10,11 +10,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 
 
 class ImageCropper():
-    INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width", "aa_ignore"]
-
-    # Define which classes should be filtered for/ignored
-    # Algal Assemblage, TWB, UNKnown, Rubble, Sand
-    AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
+    INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width"]
 
     def __init__(self, output_root, base_input_dir, dirs=None, recurse=False):
         self.dirs = dirs

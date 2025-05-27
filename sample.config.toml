@@ -40,6 +40,8 @@ LossFunction = "cross-entropy" # currently, only cross-entropy loss is supported
 ReadInputAsGrayscale = true
 LabelColumn = "annotation"  # "annotation": all coral annotations, "aa_ignore": AA vs not AA
 
+LabelColumn = "annotation"  # "annotation": all coral annotations, "aa_ignore": AA vs not AA
+
 
 [training.model.aspp]
 ASPPEnabled = true

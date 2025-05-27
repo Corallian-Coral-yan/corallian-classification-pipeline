@@ -9,7 +9,7 @@ from PIL import Image
 import logging
 
 class ImageDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation"):
+    def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation", label_column="annotation"):
         self.annotations_file = annotations_file
         self.img_dir = img_dir
         self.verbose = verbose
@@ -20,14 +20,20 @@ class ImageDataset(Dataset):
 
         raw_labels = pd.read_csv(annotations_file)
 
-        # Temporarily handle incorrectly sized crops by dropping them
+        # Drop invalid image sizes
         raw_labels = raw_labels.drop(
             raw_labels[(raw_labels["width"] != 500) | (raw_labels["height"] != 500)].index
         )
 
-        # label encode categorical labels
+        # Filter out AA labels BEFORE encoding
+        raw_labels = raw_labels[raw_labels[self.label_column] != "AA"]
+        assert "AA" not in raw_labels[self.label_column].values, "'AA' still present after filtering"
+
+        # Encode class labels
         self.le.fit(raw_labels[self.label_column])
         raw_labels[self.label_column] = self.le.transform(raw_labels[self.label_column])
+        print("Classes after encoding:", self.le.classes_)
+
 
         self.class_to_idx = {class_name: idx for idx, class_name in enumerate(self.le.classes_)}
         self.idx_to_class = {idx: class_name for idx, class_name in enumerate(self.le.classes_)}
