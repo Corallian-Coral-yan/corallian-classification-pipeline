@@ -8,8 +8,13 @@ import logging
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 
+
 class ImageCropper():
-    INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width"]
+    INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width", "aa_ignore"]
+
+    # Define which classes should be filtered for/ignored
+    # Algal Assemblage, TWB, UNKnown, Rubble, Sand
+    AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
 
     def __init__(self, output_root, base_input_dir, dirs=None, recurse=False):
         self.dirs = dirs
@@ -216,7 +221,14 @@ class ImageCropper():
             logging.info(f"Saved: {cropped_output_path}")
 
             # Add image information to the index
-            index_file_writer.writerow([os.path.join(relative_path, cropped_output_filename), label, timestamp, cropped.shape[0], cropped.shape[1]])
+            index_file_writer.writerow([
+                os.path.join(relative_path, cropped_output_filename), 
+                label, 
+                timestamp, 
+                cropped.shape[0], 
+                cropped.shape[1],
+                label in self.AA_CLASSES_TO_IGNORE
+            ])
 
 
 

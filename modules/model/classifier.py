@@ -14,6 +14,7 @@ import wandb.sklearn
 from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
+from sklearn.metrics import confusion_matrix 
 
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP
@@ -41,6 +42,11 @@ class ResNetASPPClassifier(nn.Module):
         self.model_verbose = model_config["Verbose"]
         self.random_seed = model_config["RandomSeed"]
         self.validation_split = model_config["ValidationSplit"]
+
+        if model_config["LabelColumn"] not in ["annotation", "aa_ignore"]:
+            raise TypeError(f"Invalid label column: {model_config["LabelColumn"]}")
+        self.label_column = model_config["LabelColumn"]
+        logging.info(f"Label Column: {self.label_column}")
 
         # Loss function
         if model_config["LossFunction"] == "cross-entropy":
@@ -83,7 +89,8 @@ class ResNetASPPClassifier(nn.Module):
             self.aspp = ASPP(in_channels=self.aspp_in_channels, out_channels=self.aspp_out_channels, atrous_rates=self.atrous_rates).to(self.device)
         else:
             logging.info("ASPP Disabled. . .")
-            self.aspp_out_channels = 2048  # Default output channels from ResNet
+            self.aspp_out_channels = 512 if self.config["ResNetModel"] == 18 else 2048  # Default output channels from ResNet
+            
         # Visual Embedding
         self.visual_embedding_enabled = self.config["model"]["visual_embedding"].get("EmbeddingEnabled", True)
     
@@ -166,11 +173,11 @@ class ResNetASPPClassifier(nn.Module):
         return x
 
     def load_data(self):
-        self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split)
-        self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True)
+        self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split, label_column=self.label_column)
+        self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True, label_column=self.label_column)
         logging.info("Successfully created data loaders")
 
-    def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False):
+    def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
         # define transforms
         if self.grayscale:
             transform = transforms.Compose([transforms.Grayscale(), transforms.ToTensor()])
@@ -184,7 +191,8 @@ class ResNetASPPClassifier(nn.Module):
                 self.img_dir, 
                 transform=transform, 
                 target_transform=target_transform, 
-                random_state=random_seed
+                random_state=random_seed,
+                label_column=label_column
             )
 
             data_loader = torch.utils.data.DataLoader(
@@ -194,8 +202,8 @@ class ResNetASPPClassifier(nn.Module):
             return data_loader
 
         # load the dataset
-        train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed)
-        valid_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed)
+        train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
+        valid_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
 
         num_train = len(train_dataset)
         indices = list(range(num_train))
@@ -237,8 +245,10 @@ class ResNetASPPClassifier(nn.Module):
                     self.resume_from_checkpoint(self.current_epoch, self.current_checkpoint)
                     self.start_epoch = self.current_epoch
                     self.start_checkpoint = self.current_checkpoint
-
+                    
                 self._train()
+
+                return
             except RuntimeError as e:
                 if "uncorrectable ecc error encountered" in str(e).lower():
                     if self.use_checkpoints and max_retries is not None and retries == max_retries:
@@ -323,8 +333,7 @@ class ResNetASPPClassifier(nn.Module):
             
 
         #Validation
-        self.evaluate(self.valid_loader, "valid_loader")
-              
+        self.evaluate(self.valid_loader, "valid_loader")  
         if self.config["SaveModel"]:
             logging.info("Saving model. . .")
             self.save()
@@ -400,6 +409,26 @@ class ResNetASPPClassifier(nn.Module):
             
             labels = [idx_to_class[i] for i in range(conf_matrix.shape[0])]
             self.format_confusion_matrix(conf_matrix, labels, name=name)
+
+            # One-vs-all binary confusion matrices
+            for i, class_name in enumerate(labels):
+                y_true_binary = [1 if y == i else 0 for y in y_true]
+                y_pred_binary = [1 if y == i else 0 for y in y_pred]
+                binary_conf_matrix = confusion_matrix(y_true_binary, y_pred_binary, labels=[0, 1])
+
+                binary_df = pd.DataFrame(binary_conf_matrix, index=["True_Neg", "True_Pos"], columns=["Pred_Neg", "Pred_Pos"])
+                binary_path = f"{name}_binary_conf_matrix_class_{class_name}.csv"
+                binary_df.to_csv(binary_path)
+                logging.info(f"{name} Binary Confusion Matrix for class '{class_name}':\n{binary_df.to_string()}")
+
+                # Log to W&B
+                table = wandb.Table(dataframe=binary_df)
+                wandb.log({f"{name}_binary_conf_matrix_class_{class_name}": table})
+                
+                artifact = wandb.Artifact(f"{name}-binary-confusion-matrix-{class_name}", type="binary_confusion_matrix")
+                artifact.add_file(binary_path)
+                wandb.log_artifact(artifact)
+
 
     def validate(self):
         self.evaluate(self.valid_loader, "valid_loader")  

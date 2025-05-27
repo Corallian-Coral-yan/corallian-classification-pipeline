@@ -33,7 +33,7 @@ def preprocess(config):
 def train(train_config, test_config):
     if train_config["DoTraining"] or train_config["DoValidation"] or test_config["DoTesting"]:
         if train_config["model"]["NumClasses"] == 'auto':
-            train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"])
+            train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"], train_config["model"]["LabelColumn"])
             logging.info(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
 
         classifier = ResNetASPPClassifier(train_config)
@@ -69,9 +69,9 @@ def train(train_config, test_config):
 
         
 
-def get_num_classes(annotations_filepath):
+def get_num_classes(annotations_filepath, label_column):
     df = pd.read_csv(annotations_filepath)
-    return len(df['annotation'].unique())
+    return len(df[label_column].unique()) - 1  # Exclude AA label
 
 
 def full_train(config):
