@@ -33,7 +33,7 @@ def preprocess(config):
 def train(train_config, test_config):
     if train_config["DoTraining"] or train_config["DoValidation"] or test_config["DoTesting"]:
         if train_config["model"]["NumClasses"] == 'auto':
-            train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"], train_config["model"]["LabelColumn"], train_config["model"]["LabelColumn"])
+            train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"], train_config["model"]["LabelColumn"])
             logging.info(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
 
         classifier = ResNetASPPClassifier(train_config)
