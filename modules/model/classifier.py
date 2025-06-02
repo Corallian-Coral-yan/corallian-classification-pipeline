@@ -11,16 +11,18 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import wandb.sklearn
+
 from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from sklearn.metrics import precision_recall_fscore_support
-from sklearn.metrics import confusion_matrix 
+
 
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP
-from modules.data.image_dataset import ImageDataset
 from modules.model.visual_embeddings import VisualEmbedding
+from modules.data.image_dataset import ImageDataset
+from modules.data.adaptive_equalization import AdaptiveEqualization
 
 class ResNetASPPClassifier(nn.Module):
     def __init__(self, config):
@@ -182,7 +184,7 @@ class ResNetASPPClassifier(nn.Module):
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
         # define transforms
         if self.grayscale:
-            transform = transforms.Compose([transforms.Grayscale(), transforms.ToTensor()])
+            transform = transforms.Compose([transforms.Grayscale(), AdaptiveEqualization(clip_limit=0.03) transforms.ToTensor()])
         else:
             transform = transforms.ToTensor()
         target_transform = None
