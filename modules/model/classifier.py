@@ -184,7 +184,7 @@ class ResNetASPPClassifier(nn.Module):
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
         # define transforms
         if self.grayscale:
-            transform = transforms.Compose([transforms.Grayscale(), AdaptiveEqualization(clip_limit=0.03) transforms.ToTensor()])
+            transform = transforms.Compose([transforms.Grayscale(), AdaptiveEqualization(clip_limit=0.03), transforms.ToTensor()])
         else:
             transform = transforms.ToTensor()
         target_transform = None
