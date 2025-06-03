@@ -49,7 +49,7 @@ module load anaconda
 # Create the Conda environment from environment.yml
 conda create -y -n corallian-env
 
-mamba install -y -n corallian-env -c pytorch -c nvidia --file requirements.txt 
+CONDA_OVERRIDE_CUDA="11.8" mamba install -y -n corallian-env -c pytorch -c nvidia --file requirements.txt
 
 ## Flush the TMPDIR.
 if [[ $custom_tmpdir == "yes" ]]; then

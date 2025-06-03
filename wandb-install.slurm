@@ -45,6 +45,7 @@ module load anaconda
 ## Main job. Run your codes and executables here; `srun` is optional.
 conda activate corallian-env
 pip install wandb
+pip install opencv-python
 export WAND_API_KEY="PLACE YOUR API KEY HERE"
 wandb login $WAND_API_KEY
 
