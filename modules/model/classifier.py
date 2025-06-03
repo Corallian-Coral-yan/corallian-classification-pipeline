@@ -21,8 +21,10 @@ from sklearn.metrics import precision_recall_fscore_support
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP
 from modules.model.visual_embeddings import VisualEmbedding
+from modules.model.focal_loss import FocalLoss
 from modules.data.image_dataset import ImageDataset
 from modules.data.adaptive_equalization import AdaptiveEqualization
+
 
 class ResNetASPPClassifier(nn.Module):
     def __init__(self, config):
@@ -52,8 +54,18 @@ class ResNetASPPClassifier(nn.Module):
         logging.info(f"Label Column: {self.label_column}")
 
         # Loss function
+
+        if model_config.get("UseClassWeights"):
+            weights = self.compute_class_weights()
+      
         if model_config["LossFunction"] == "cross-entropy":
-            self.criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss(weight=weights)
+        elif model_config["LossFunction"] == "focal-loss":
+            self.criterion = FocalLoss(
+                weight = weights,
+                gamma=model_config.get("FocalLossGamma", 2.0),
+                reduction=model_config.get("FocalLossReduction", "mean")
+            )
         else:
             raise TypeError(f"Invalid Loss Function: {model_config['LossFunction']}")
 
@@ -482,3 +494,24 @@ class ResNetASPPClassifier(nn.Module):
         artifact = wandb.Artifact(f"{name}-confusion-matrix", type="confusion_matrix")
         artifact.add_file(f"{name}_confusion_matrix.csv")
         wandb.log_artifact(artifact)
+    
+    def compute_class_weights(self):
+        # build the dataset just to access labels
+        dataset = ImageDataset(
+            self.annotations_file,
+            self.img_dir,
+            train=True,
+            transform=transforms.ToTensor(), 
+            label_column=self.label_column,
+            random_state=self.random_seed
+        )
+
+        labels = [label for _, label in dataset]
+        labels = torch.tensor(labels)
+        class_counts = torch.bincount(labels, minlength=self.num_classes)
+        total = class_counts.sum().item()
+
+        weights = total / (self.num_classes * class_counts.float())
+        weights = weights.to(self.device)
+
+        return weights
