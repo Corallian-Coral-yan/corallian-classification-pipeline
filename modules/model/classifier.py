@@ -59,6 +59,11 @@ class ResNetASPPClassifier(nn.Module):
 
         # Image Transforms
         self.grayscale = model_config["ReadInputAsGrayscale"]
+        self.adaptive_equalization = model_config["UseAdaptiveEqualization"]
+        self.random_affine_transforms = model_config["UseRandomAffineTransforms"]
+        self.random_affine_transforms_degrees = model_config["RandomAffineDegrees"]
+        self.random_crop = model_config["UseRandomCrop"]
+        self.random_crop_size = model_config["RandomCropSize"]
 
         # ResNet backbone
         if self.config["ResNetModel"] == 18:
@@ -183,10 +188,19 @@ class ResNetASPPClassifier(nn.Module):
 
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
         # define transforms
+        applied_transforms = []
         if self.grayscale:
-            transform = transforms.Compose([transforms.Grayscale(), AdaptiveEqualization(clip_limit=0.03), transforms.ToTensor()])
-        else:
-            transform = transforms.ToTensor()
+            applied_transforms.append(transforms.Grayscale())
+        if self.adaptive_equalization:
+            applied_transforms.append(AdaptiveEqualization(clip_limit=0.03))
+        if self.random_crop:
+            applied_transforms.append(transforms.RandomCrop(self.random_crop_size, pad_if_needed=True))
+        if self.random_affine_transforms:
+            applied_transforms.append(transforms.RandomAffine(self.random_affine_transforms_degrees))
+
+        applied_transforms.append(transforms.ToTensor())
+
+        transform = transforms.Compose(applied_transforms)
         target_transform = None
 
         if test:

@@ -7,6 +7,7 @@ from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 from PIL import Image
 import logging
+import matplotlib.pyplot as plt
 
 class ImageDataset(Dataset):
     def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation"):
@@ -33,8 +34,6 @@ class ImageDataset(Dataset):
         # Encode class labels
         self.le.fit(raw_labels[self.label_column])
         raw_labels[self.label_column] = self.le.transform(raw_labels[self.label_column])
-        print("Classes after encoding:", self.le.classes_)
-
 
         self.class_to_idx = {class_name: idx for idx, class_name in enumerate(self.le.classes_)}
         self.idx_to_class = {idx: class_name for idx, class_name in enumerate(self.le.classes_)}
@@ -64,7 +63,7 @@ class ImageDataset(Dataset):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         image = Image.open(img_path)
         label = self.img_labels.iloc[idx][self.label_column]
-
+        
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
