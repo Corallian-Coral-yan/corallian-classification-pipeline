@@ -70,6 +70,7 @@ EmbeddingEnabled = true
 
 [testing]
 DoTesting = true
+TestOutputFolder = "./test-output"  # "none" or any filepath, none means don't save test output to folder
 
 [logging]
 # to revert to print behavior, use LogFormat = "%(message)s"

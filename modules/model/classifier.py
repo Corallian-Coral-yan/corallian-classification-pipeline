@@ -4,6 +4,7 @@ import itertools
 import math
 import os
 import traceback
+import shutil
 
 import wandb
 import numpy as np
@@ -57,6 +58,8 @@ class ResNetASPPClassifier(nn.Module):
 
         if model_config.get("UseClassWeights"):
             weights = self.compute_class_weights()
+        else:
+            weights = None
       
         if model_config["LossFunction"] == "cross-entropy":
             self.criterion = nn.CrossEntropyLoss(weight=weights)
@@ -194,8 +197,8 @@ class ResNetASPPClassifier(nn.Module):
         return x
 
     def load_data(self):
-        self.train_loader, self.valid_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split, label_column=self.label_column)
-        self.test_loader = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True, label_column=self.label_column)
+        self.train_loader, self.valid_loader, self.train_raw_dataset, self.valid_raw_dataset = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, valid_size=self.validation_split, label_column=self.label_column)
+        self.test_loader, self.test_raw_dataset = self._data_loader(batch_size=self.batch_size, random_seed=self.random_seed, test=True, label_column=self.label_column)
         logging.info("Successfully created data loaders")
 
     def _data_loader(self, batch_size, random_seed=42, valid_size=0.1, shuffle=True, test=False, label_column="annotation"):
@@ -229,7 +232,7 @@ class ResNetASPPClassifier(nn.Module):
                 dataset, batch_size=batch_size, shuffle=shuffle
             )
 
-            return data_loader
+            return data_loader, dataset
 
         # load the dataset
         train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
@@ -253,7 +256,7 @@ class ResNetASPPClassifier(nn.Module):
         valid_loader = torch.utils.data.DataLoader(
             valid_dataset, batch_size=batch_size, sampler=valid_sampler)
 
-        return (train_loader, valid_loader)
+        return (train_loader, valid_loader, train_dataset, valid_dataset)
 
     def assert_has_cuda(self):
         torch.zeros(1).cuda()
@@ -320,7 +323,7 @@ class ResNetASPPClassifier(nn.Module):
                 for _ in range(self.start_checkpoint):
                     next_checkpoint_batch = checkpoint_batch_iter.__next__()
 
-            for i, (images, labels) in enumerate(self.train_loader):                  
+            for i, (images, labels, _) in enumerate(self.train_loader):                  
                 if (self.use_checkpoints 
                         and epoch == self.start_epoch - 1 
                         and i < (self.start_checkpoint * checkpoint_step)):
@@ -406,7 +409,7 @@ class ResNetASPPClassifier(nn.Module):
         self.load_state_dict(model.state_dict())
         logging.info(f"Successfully loaded state_dict from pretrained model {filepath}")
 
-    def evaluate(self, data_loader, name=""):
+    def evaluate(self, data_loader, name="", saved_predictions_folder=None, class_names=None):
         logging.info(f"Running evaluation on data loader {name}")
 
         with torch.no_grad():
@@ -416,21 +419,48 @@ class ResNetASPPClassifier(nn.Module):
             y_true = []  # Store true labels
             y_pred = []  # Store predicted labels
 
+            # Create predictions folder if it doesn't exist
+            if saved_predictions_folder is not None and not os.path.isdir(saved_predictions_folder):
+                os.mkdir(saved_predictions_folder)
+
+            # Create subfolders for each output class
+            if saved_predictions_folder is not None:
+                if class_names is None:
+                    raise ValueError("class_names cannot be None when saved_predictions_folder is not None")
+                
+                for class_name in class_names:
+                    folder_name = os.path.join(saved_predictions_folder, f"predicted-{class_name}")
+                    if not os.path.isdir(folder_name):
+                        os.mkdir(folder_name)
+
             total_step = len(data_loader)
-            for i, (images, labels) in enumerate(data_loader):
+            for i, (images, actual, paths) in enumerate(data_loader):
                 logging.info(f"Evaluating | Batch {i + 1}/{total_step}")
                 images = images.to(self.device)
-                labels = labels.to(self.device)
+                actual = actual.to(self.device)
                 outputs = self(images)
                 _, predicted = torch.max(outputs.data, 1)
 
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                total += actual.size(0)
+                correct += (predicted == actual).sum().item()
 
-                y_true.extend(labels.cpu().numpy())  
+                y_true.extend(actual.cpu().numpy())  
                 y_pred.extend(predicted.cpu().numpy())
 
-                del images, labels, outputs
+                # Revert label encoding on both predicted and actual labels
+                actual_labels = [class_names[a] for a in actual]
+                predicted_labels = [class_names[p] for p in predicted]
+
+                logging.info(predicted_labels)
+
+                if saved_predictions_folder is not None:
+                    for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
+                        logging.info(f"{path}, {predicted_label}, {actual_label}")
+                        
+                        prediction_filename = f"actual-{actual_label}_{i}_{j}{os.path.splitext(path)[1]}"
+                        shutil.copy(path, os.path.join(saved_predictions_folder, f"predicted-{predicted_label}", prediction_filename))
+
+                del images, actual, outputs
 
             accuracy = 100 * correct / total
 
@@ -476,11 +506,12 @@ class ResNetASPPClassifier(nn.Module):
     def validate(self):
         return self.evaluate(self.valid_loader, "valid_loader")  
 
-    def test(self, load_best_model=False):
+    def test(self, load_best_model=False, test_output_folder=None):
         if load_best_model:
             self.resume_from_checkpoint(self.best_epoch, self.checkpoints_per_epoch)
 
-        return self.evaluate(self.test_loader, "test_loader")
+        class_names = list(map(str, self.test_raw_dataset.le.classes_))
+        return self.evaluate(self.test_loader, "test_loader", test_output_folder, class_names)
     
     def format_confusion_matrix(self, conf_matrix, labels, name=""):
         df = pd.DataFrame(conf_matrix, index=[f"True_{label}" for label in labels], columns=[f"Pred_{label}" for label in labels])
@@ -506,7 +537,7 @@ class ResNetASPPClassifier(nn.Module):
             random_state=self.random_seed
         )
 
-        labels = [label for _, label in dataset]
+        labels = [label for _, label, _ in dataset]
         labels = torch.tensor(labels)
         class_counts = torch.bincount(labels, minlength=self.num_classes)
         total = class_counts.sum().item()

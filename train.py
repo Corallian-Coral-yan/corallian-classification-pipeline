@@ -31,7 +31,7 @@ def preprocess(config):
         cropper.begin_cropping()
 
 def train(train_config, test_config):
-    if train_config["DoTraining"] or train_config["DoValidation"] or test_config["DoTesting"]:
+    if train_config["DoTraining"] or test_config["DoTesting"]:
         if train_config["model"]["NumClasses"] == 'auto':
             train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"], train_config["model"]["LabelColumn"])
             logging.info(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
@@ -41,7 +41,7 @@ def train(train_config, test_config):
         logging.info("Classifier created")
 
         # Fix: Ensure labels are converted to LongTensor during training
-        for batch_idx, (images, labels) in enumerate(classifier.train_loader):
+        for batch_idx, (images, labels, _) in enumerate(classifier.train_loader):
             images = images.float().to(classifier.device)
             # Convert labels to LongTensor
             labels = labels.to(classifier.device).long()
@@ -61,7 +61,8 @@ def train(train_config, test_config):
             logging.info("Training skipped")
 
         if test_config["DoTesting"]:
-            classifier.test(load_best_model=True)
+            test_output_folder = None if test_config["TestOutputFolder"] == "none" else test_config["TestOutputFolder"]
+            classifier.test(load_best_model=train_config["DoTraining"], test_output_folder=test_output_folder)
 
         
 

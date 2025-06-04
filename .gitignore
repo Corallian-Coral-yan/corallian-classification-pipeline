@@ -10,3 +10,4 @@ config.toml
 /*.csv
 wandb
 venv/
+test-output/
