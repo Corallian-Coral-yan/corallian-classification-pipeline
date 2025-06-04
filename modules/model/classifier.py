@@ -309,7 +309,7 @@ class ResNetASPPClassifier(nn.Module):
         # include the current model if testing on a checkpoint
         if self.load_checkpoints:
             self.best_accuracy, _, _, _ = self.validate()
-            self.best_epoch = self.start_epochs
+            self.best_epoch = self.start_epoch
             
         for epoch in range(self.start_epoch - 1, self.num_epochs):
             checkpoint_batch_iter = itertools.count(start=checkpoint_step, step=checkpoint_step)
