@@ -401,12 +401,12 @@ class ResNetASPPClassifier(nn.Module):
             self.checkpoint_folder, 
             f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
         )
-        self.load_state_dict(torch.load(filepath))
+        self.load_state_dict(torch.load(filepath), strict=False)
         logging.info(f"Successfully loaded state_dict from checkpoint {filepath}")
 
     def load_pretrained_model(self, filepath):
         model = torch.load(filepath, weights_only=False)
-        self.load_state_dict(model.state_dict())
+        self.load_state_dict(model.state_dict(), strict=False)
         logging.info(f"Successfully loaded state_dict from pretrained model {filepath}")
 
     def evaluate(self, data_loader, name="", saved_predictions_folder=None, class_names=None):
