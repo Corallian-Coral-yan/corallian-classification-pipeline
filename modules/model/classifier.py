@@ -451,11 +451,8 @@ class ResNetASPPClassifier(nn.Module):
                 actual_labels = [class_names[a] for a in actual]
                 predicted_labels = [class_names[p] for p in predicted]
 
-                logging.info(predicted_labels)
-
                 if saved_predictions_folder is not None:
                     for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
-                        logging.info(f"{path}, {predicted_label}, {actual_label}")
                         
                         prediction_filename = f"actual-{actual_label}_{i}_{j}{os.path.splitext(path)[1]}"
                         shutil.copy(path, os.path.join(saved_predictions_folder, f"predicted-{predicted_label}", prediction_filename))
