@@ -79,6 +79,9 @@ class ResNetASPPClassifier(nn.Module):
         self.random_affine_transforms_degrees = model_config["RandomAffineDegrees"]
         self.random_crop = model_config["UseRandomCrop"]
         self.random_crop_size = model_config["RandomCropSize"]
+        self.random_erasing = model_config["UseRandomErasing"]
+        self.random_horizontal_flip = model_config["UseRandomHorizontalFlip"]
+        self.random_vertical_flip = model_config["UseRandomVerticalFlip"]
 
         # ResNet backbone
         if self.config["ResNetModel"] == 18:
@@ -208,6 +211,12 @@ class ResNetASPPClassifier(nn.Module):
             applied_transforms.append(transforms.Grayscale())
         if self.adaptive_equalization:
             applied_transforms.append(AdaptiveEqualization(clip_limit=0.03))
+        if self.random_erasing:
+            applied_transforms.extend([transforms.ToTensor(), transforms.RandomErasing(), transforms.ToPILImage()])
+        if self.random_horizontal_flip:
+            applied_transforms.append(transforms.RandomHorizontalFlip())
+        if self.random_vertical_flip:
+            applied_transforms.append(transforms.RandomVerticalFlip())
         if self.random_crop:
             applied_transforms.append(transforms.RandomCrop(self.random_crop_size, pad_if_needed=True))
         if self.random_affine_transforms:
@@ -215,8 +224,10 @@ class ResNetASPPClassifier(nn.Module):
 
         applied_transforms.append(transforms.ToTensor())
 
+
         transform = transforms.Compose(applied_transforms)
         target_transform = None
+        logging.info(f"Applied transforms: {transform}")
 
         if test:
             dataset = ImageDataset(
@@ -311,7 +322,7 @@ class ResNetASPPClassifier(nn.Module):
 
         # include the current model if testing on a checkpoint
         if self.load_checkpoints:
-            self.best_accuracy, _, _, _ = self.validate()
+            self.best_accuracy, _, _ = self.validate()
             self.best_epoch = self.start_epoch
             
         for epoch in range(self.start_epoch - 1, self.num_epochs):
@@ -447,11 +458,11 @@ class ResNetASPPClassifier(nn.Module):
                 y_true.extend(actual.cpu().numpy())  
                 y_pred.extend(predicted.cpu().numpy())
 
-                # Revert label encoding on both predicted and actual labels
-                actual_labels = [class_names[a] for a in actual]
-                predicted_labels = [class_names[p] for p in predicted]
-
                 if saved_predictions_folder is not None:
+                    # Revert label encoding on both predicted and actual labels
+                    actual_labels = [class_names[a] for a in actual]
+                    predicted_labels = [class_names[p] for p in predicted]
+
                     for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
                         
                         prediction_filename = f"actual-{actual_label}_{i}_{j}{os.path.splitext(path)[1]}"
