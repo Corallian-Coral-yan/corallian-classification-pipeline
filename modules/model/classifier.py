@@ -55,20 +55,8 @@ class ResNetASPPClassifier(nn.Module):
         logging.info(f"Label Column: {self.label_column}")
 
         # Loss function
-
-        if model_config.get("UseClassWeights"):
-            weights = self.compute_class_weights()
-        else:
-            weights = None
-      
         if model_config["LossFunction"] == "cross-entropy":
-            self.criterion = nn.CrossEntropyLoss(weight=weights)
-        elif model_config["LossFunction"] == "focal-loss":
-            self.criterion = FocalLoss(
-                weight = weights,
-                gamma=model_config.get("FocalLossGamma", 2.0),
-                reduction=model_config.get("FocalLossReduction", "mean")
-            )
+            self.criterion = nn.CrossEntropyLoss()
         else:
             raise TypeError(f"Invalid Loss Function: {model_config['LossFunction']}")
 
