@@ -41,6 +41,7 @@ class ResNetASPPClassifier(nn.Module):
         self.img_dir = self.config["ImageDir"]
                     
         model_config = self.config["model"]
+        self.model_config = model_config
         self.num_classes = model_config["NumClasses"]
         self.num_epochs = model_config["NumEpochs"]
         self.batch_size = model_config["BatchSize"]
