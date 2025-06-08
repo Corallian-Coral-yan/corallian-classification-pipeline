@@ -64,6 +64,10 @@ def train(train_config, test_config):
             test_output_folder = None if test_config["TestOutputFolder"] == "none" else test_config["TestOutputFolder"]
             classifier.test(load_best_model=train_config["DoTraining"], test_output_folder=test_output_folder)
 
+        if train_config["SaveModel"] and train_config["DoTraining"]: 
+            logging.info("Saving model. . .")
+            classifier.save()
+
         
 
 def get_num_classes(annotations_filepath, label_column):

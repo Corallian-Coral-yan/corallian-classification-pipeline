@@ -377,10 +377,6 @@ class ResNetASPPClassifier(nn.Module):
                     self.best_accuracy = accuracy
 
                 logging.info(f"Best epoch so far: {self.best_epoch} with accuracy {self.best_accuracy}")
-              
-        if self.config["SaveModel"]:
-            logging.info("Saving model. . .")
-            self.save()
 
     def save(self):
         torch.save(self, self.config["ModelFilepath"])
