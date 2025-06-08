@@ -435,7 +435,7 @@ class ResNetASPPClassifier(nn.Module):
             for i, (images, actual, paths) in enumerate(data_loader):
                 logging.info(f"Evaluating | Batch {i + 1}/{total_step}")
                 images = images.to(self.device)
-                actual = actual.to(self.device)z
+                actual = actual.to(self.device)
                 _, predicted = torch.max(outputs.data, 1)
 
                 total += actual.size(0)
@@ -449,8 +449,19 @@ class ResNetASPPClassifier(nn.Module):
                     actual_labels = [class_names[a] for a in actual]
                     predicted_labels = [class_names[p] for p in predicted]
 
+                    if self.model_config["LabelColumn"] == "aa_ignore":
+                        # Map labels to coral/not-coral
+                        label_map = {
+                            "false": "coral",
+                            "true": "not-coral"
+                        }
+
                     for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
-                        
+                        if self.model_config["LabelColumn"] == "aa_ignore":
+                            actual_label = label_map.get(actual_label, actual_label)
+                            predicted_label = label_map.get(predicted_label, predicted_label)
+
+                        # Copy the image to the saved predictions folder        
                         original_filename = os.path.basename(path)
                         name_only, ext = os.path.splitext(original_filename)
                         prediction_filename = f"{name_only}__actual-{actual_label}__pred-{predicted_label}{ext}"
