@@ -22,7 +22,6 @@ from sklearn.metrics import precision_recall_fscore_support
 from modules.model.resnet_hdc import ResNet18_HDC, ResNet101_HDC
 from modules.model.aspp import ASPP
 from modules.model.visual_embeddings import VisualEmbedding
-from modules.model.focal_loss import FocalLoss
 from modules.data.image_dataset import ImageDataset
 from modules.data.adaptive_equalization import AdaptiveEqualization
 
@@ -436,8 +435,7 @@ class ResNetASPPClassifier(nn.Module):
             for i, (images, actual, paths) in enumerate(data_loader):
                 logging.info(f"Evaluating | Batch {i + 1}/{total_step}")
                 images = images.to(self.device)
-                actual = actual.to(self.device)
-                outputs = self(images)
+                actual = actual.to(self.device)z
                 _, predicted = torch.max(outputs.data, 1)
 
                 total += actual.size(0)
@@ -453,11 +451,13 @@ class ResNetASPPClassifier(nn.Module):
 
                     for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
                         
-                        prediction_filename = f"actual-{actual_label}_{i}_{j}{os.path.splitext(path)[1]}"
+                        original_filename = os.path.basename(path)
+                        name_only, ext = os.path.splitext(original_filename)
+                        prediction_filename = f"{name_only}__actual-{actual_label}__pred-{predicted_label}{ext}"
                         shutil.copy(path, os.path.join(saved_predictions_folder, f"predicted-{predicted_label}", prediction_filename))
 
                 del images, actual, outputs
-
+    
             accuracy = 100 * correct / total
 
             wandb.log({
