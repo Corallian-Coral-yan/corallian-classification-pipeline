@@ -28,8 +28,10 @@ class ImageDataset(Dataset):
 
         # Filter out AA labels BEFORE encoding
         if label_column == "annotation":
-            raw_labels = raw_labels[raw_labels[self.label_column] != "AA"]
-            assert "AA" not in raw_labels[self.label_column].values, "'AA' still present after filtering"
+            AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
+            raw_labels = raw_labels[~raw_labels[self.label_column].isin(AA_CLASSES_TO_IGNORE)]
+            assert not any(label in AA_CLASSES_TO_IGNORE for label in raw_labels[self.label_column].values), \
+                f"One or more ignored labels ({AA_CLASSES_TO_IGNORE}) still present after filtering"
 
         # Encode class labels
         self.le.fit(raw_labels[self.label_column])
