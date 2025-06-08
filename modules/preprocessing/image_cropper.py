@@ -11,7 +11,8 @@ from PIL.ExifTags import TAGS, GPSTAGS
 
 class ImageCropper():
     INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width"]
-
+    AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
+    
     def __init__(self, output_root, base_input_dir, dirs=None, recurse=False):
         self.dirs = dirs
         self.output_root = output_root

@@ -461,7 +461,9 @@ class ResNetASPPClassifier(nn.Module):
             accuracy = 100 * correct / total
 
             wandb.log({
-                f"{name}_accuracy": accuracy
+                f"{name}_accuracy": accuracy,
+                f"{name}_eval_step": i,
+                f"{name}_current_epoch": self.current_epoch
             })
 
             logging.info(f'{name}_Accuracy: {accuracy:.2f}%')
