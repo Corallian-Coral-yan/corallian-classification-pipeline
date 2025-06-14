@@ -21,12 +21,17 @@ class ImageDataset(Dataset):
         self.label_column = label_column
         self.le = LabelEncoder()
 
-        raw_labels = pd.read_csv(annotations_file)
+        raw_labels = pd.read_csv(annotations_file, index_col=False)
 
         # Drop invalid image sizes
         raw_labels = raw_labels.drop(
             raw_labels[(raw_labels["width"] != 500) | (raw_labels["height"] != 500)].index
         )
+
+        # Drop N/A labels
+        original_length = len(raw_labels)
+        raw_labels = raw_labels.dropna()
+        logging.info(f"ImageDataset: Dropped {original_length - len(raw_labels)} NaN values")
 
         # Filter out AA labels BEFORE encoding
         if label_column == "annotation":

@@ -228,6 +228,10 @@ class ResNetASPPClassifier(nn.Module):
                 label_column=label_column
             )
 
+            num_encoded_classes = len(dataset.le.classes_)
+            if num_encoded_classes != self.num_classes:
+                raise RuntimeError(f"Test Dataset: LabelEncoder encoded {num_encoded_classes} classes, but num_classes was set to {self.num_classes}")
+
             data_loader = torch.utils.data.DataLoader(
                 dataset, batch_size=batch_size, shuffle=shuffle
             )
@@ -237,6 +241,15 @@ class ResNetASPPClassifier(nn.Module):
         # load the dataset
         train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
         valid_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
+        
+        num_encoded_classes = len(train_dataset.le.classes_)
+        if num_encoded_classes != self.num_classes:
+            raise RuntimeError(f"Training Dataset: LabelEncoder encoded {num_encoded_classes} classes, but num_classes was set to {self.num_classes}")
+        
+        num_encoded_classes = len(valid_dataset.le.classes_)
+        if num_encoded_classes != self.num_classes:
+            raise RuntimeError(f"Validation Dataset: LabelEncoder encoded {num_encoded_classes} classes, but num_classes was set to {self.num_classes}")
+        
         num_train = len(train_dataset)
         indices = list(range(num_train))
         split = int(np.floor(valid_size * num_train))

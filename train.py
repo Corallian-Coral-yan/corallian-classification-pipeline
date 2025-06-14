@@ -74,9 +74,14 @@ def train(train_config, test_config):
 
 def get_num_classes(annotations_filepath, label_column, exclude=ImageDataset.AA_CLASSES_TO_IGNORE):
     df = pd.read_csv(annotations_filepath)
+    print(df)
     classes = df[label_column].unique()
 
     logging.info(f"Unique classes found: {classes}")
+    if True in pd.isnull(classes):
+        logging.info(f"Ignoring NaN...")
+        classes = classes[~pd.isnull(classes)]
+
     if exclude:
         classes = np.setdiff1d(classes, exclude)
 

@@ -10,7 +10,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 
 
 class ImageCropper():
-    INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width"]
+    INDEX_FILE_COLUMNS = ["filepath", "annotation", "timestamp", "height", "width", "aa_ignore"]
     AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
     
     def __init__(self, output_root, base_input_dir, dirs=None, recurse=False):
@@ -145,6 +145,10 @@ class ImageCropper():
                     points.append((x, y))
 
                     label = label_line.split(",")[1].strip('"')
+                    if len(label) == 0:
+                        logging.warning(f"Skipping empty label in file {annotation_file}: {label_line}")
+                        continue
+
                     labels.append(label)
                 except (ValueError, IndexError):
                     logging.warning(f"Skipping invalid line in file {annotation_file}: {point_line} or {label_line}")
