@@ -75,7 +75,6 @@ def train(train_config, test_config):
 def get_num_classes(annotations_filepath, label_column, exclude=ImageDataset.AA_CLASSES_TO_IGNORE):
     df = pd.read_csv(annotations_filepath)
     classes = df[label_column].unique()
-    classes[0] = "AA"
 
     logging.info(f"Unique classes found: {classes}")
     if exclude:
