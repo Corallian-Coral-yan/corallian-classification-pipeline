@@ -230,6 +230,7 @@ class ResNetASPPClassifier(nn.Module):
 
             num_encoded_classes = len(dataset.le.classes_)
             if num_encoded_classes != self.num_classes:
+                logging.error(f"LabelEncoder: {dataset.le.classes_}")
                 raise RuntimeError(f"Test Dataset: LabelEncoder encoded {num_encoded_classes} classes, but num_classes was set to {self.num_classes}")
 
             data_loader = torch.utils.data.DataLoader(
