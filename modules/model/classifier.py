@@ -16,6 +16,7 @@ import wandb.sklearn
 from .metrics import compute_metrics, compute_confusion_matrix
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data import WeightedRandomSampler
 from sklearn.metrics import precision_recall_fscore_support
 
 
@@ -236,7 +237,6 @@ class ResNetASPPClassifier(nn.Module):
         # load the dataset
         train_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
         valid_dataset = ImageDataset(self.annotations_file, self.img_dir, train=True, transform=transform, target_transform=target_transform, random_state=random_seed, label_column=label_column)
-
         num_train = len(train_dataset)
         indices = list(range(num_train))
         split = int(np.floor(valid_size * num_train))
@@ -246,7 +246,29 @@ class ResNetASPPClassifier(nn.Module):
             np.random.shuffle(indices)
 
         train_idx, valid_idx = indices[split:], indices[:split]
-        train_sampler = SubsetRandomSampler(train_idx)
+        if self.model_config.get("UseOverSampling", False):
+            logging.info("Using oversampling for training dataset")
+
+            # Load annotations and extract training labels
+            df = pd.read_csv(self.annotations_file)
+            train_labels = df.loc[train_idx, label_column]
+            label_distribution = train_labels.value_counts().to_dict()
+            logging.info(f"Train label distribution: {label_distribution}")
+
+            # Calculate weights: inverse of support
+            class_counts = train_labels.value_counts()
+            class_weights = 1.0 / class_counts
+            sample_weights = train_labels.map(class_weights).values
+
+            train_sampler = WeightedRandomSampler(
+                weights=sample_weights,
+                num_samples=len(sample_weights),
+                replacement=True
+            )
+        else:
+            train_sampler = SubsetRandomSampler(train_idx)
+
+
         valid_sampler = SubsetRandomSampler(valid_idx)
 
         train_loader = torch.utils.data.DataLoader(
@@ -399,12 +421,13 @@ class ResNetASPPClassifier(nn.Module):
         self.load_state_dict(torch.load(filepath), strict=False)
         logging.info(f"Successfully loaded state_dict from checkpoint {filepath}")
 
-    def load_pretrained_model(self, filepath):
+    def load_pretrained_model(self, filepath, config):
+        self.model_config = config
         model = torch.load(filepath, weights_only=False)
         self.load_state_dict(model.state_dict(), strict=False)
         logging.info(f"Successfully loaded state_dict from pretrained model {filepath}")
 
-    def evaluate(self, data_loader, name="", saved_predictions_folder=None, class_names=None):
+    def evaluate(self, data_loader, model_config,  name="", saved_predictions_folder=None, class_names=None):
         logging.info(f"Running evaluation on data loader {name}")
 
         with torch.no_grad():
@@ -444,10 +467,16 @@ class ResNetASPPClassifier(nn.Module):
 
                 if saved_predictions_folder is not None:
                     # Revert label encoding on both predicted and actual labels
+                    logging.info(f"Predicted: {predicted}")
+                    logging.info(f"Class names: {class_names}")
+                    logging.info(f"Actual: {actual}")
+                    logging.info(f"Actual types: {[type(a) for a in actual]}")
+                    logging.info(f"Max predicted: {max(predicted)}")
+                    logging.info(f"Length of class_names: {len(class_names)}")
                     actual_labels = [class_names[a] for a in actual]
                     predicted_labels = [class_names[p] for p in predicted]
 
-                    if self.model_config["LabelColumn"] == "aa_ignore":
+                    if model_config["LabelColumn"] == "aa_ignore":
                         # Map labels to coral/not-coral
                         label_map = {
                             "false": "coral",
@@ -455,7 +484,7 @@ class ResNetASPPClassifier(nn.Module):
                         }
 
                     for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
-                        if self.model_config["LabelColumn"] == "aa_ignore":
+                        if model_config["LabelColumn"] == "aa_ignore":
                             actual_label = label_map.get(actual_label, actual_label)
                             predicted_label = label_map.get(predicted_label, predicted_label)
 
@@ -511,14 +540,14 @@ class ResNetASPPClassifier(nn.Module):
 
 
     def validate(self):
-        return self.evaluate(self.valid_loader, "valid_loader")  
+        return self.evaluate(self.valid_loader, self.model_config, "valid_loader")  
 
     def test(self, load_best_model=False, test_output_folder=None):
         if load_best_model:
             self.resume_from_checkpoint(self.best_epoch, self.checkpoints_per_epoch)
 
         class_names = list(map(str, self.test_raw_dataset.le.classes_))
-        return self.evaluate(self.test_loader, "test_loader", test_output_folder, class_names)
+        return self.evaluate(self.test_loader, self.model_config, "test_loader", test_output_folder, class_names)
     
     def format_confusion_matrix(self, conf_matrix, labels, name=""):
         df = pd.DataFrame(conf_matrix, index=[f"True_{label}" for label in labels], columns=[f"Pred_{label}" for label in labels])

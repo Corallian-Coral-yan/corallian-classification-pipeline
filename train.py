@@ -51,7 +51,7 @@ def train(train_config, test_config):
                 logging.info(f"Label dtype: {labels.dtype}")
                 
         if train_config["LoadPretrainedModel"]:
-            classifier.load_pretrained_model(train_config["PretrainedModelFilepath"])
+            classifier.load_pretrained_model(train_config["PretrainedModelFilepath"], train_config["model"])
         else:
             logging.info("No pretrained model loaded")
 
