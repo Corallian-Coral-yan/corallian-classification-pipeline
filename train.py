@@ -74,7 +74,11 @@ def train(train_config, test_config):
 
 def get_num_classes(annotations_filepath, label_column, exclude=ImageDataset.AA_CLASSES_TO_IGNORE):
     df = pd.read_csv(annotations_filepath)
-    print(df)
+    # remove malformed images like image_dataset
+    df = df.drop(
+        df[(df["width"] != 500) | (df["height"] != 500)].index
+    )
+
     classes = df[label_column].unique()
 
     logging.info(f"Unique classes found: {classes}")
