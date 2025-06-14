@@ -5,10 +5,12 @@ import logging
 import wandb
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 
 from modules.model.classifier import ResNetASPPClassifier
 from modules.preprocessing.image_cropper import ImageCropper
+from modules.data.image_dataset import ImageDataset
 
 # Preprocessing pipeline
 def preprocess(config):
@@ -70,9 +72,19 @@ def train(train_config, test_config):
 
         
 
-def get_num_classes(annotations_filepath, label_column):
+def get_num_classes(annotations_filepath, label_column, exclude=ImageDataset.AA_CLASSES_TO_IGNORE):
     df = pd.read_csv(annotations_filepath)
-    return len(df[label_column].unique())
+    classes = df[label_column].unique()
+    classes[0] = "AA"
+
+    logging.info(f"Unique classes found: {classes}")
+    if exclude:
+        classes = np.setdiff1d(classes, exclude)
+
+        logging.info(f"Excluding classes {ImageDataset.AA_CLASSES_TO_IGNORE}")
+        logging.info(f"Unique classes: {classes}")
+
+    return len(classes)
 
 
 def full_train(config):

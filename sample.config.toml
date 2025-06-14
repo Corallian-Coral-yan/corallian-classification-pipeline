@@ -7,9 +7,9 @@ BaseInputDir = "D:/ORIGINAL (aka MONITORING)"
 InputRecurse = true
 
 [training]
-LoadPretrainedModel = true
+LoadPretrainedModel = false
 PretrainedModelFilepath = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/test-model.pt"
-DoTraining = false
+DoTraining = true
 SaveModel = true
 ResNetModel = 18                          # valid values: 18, 101
 ForceUseCuda = false

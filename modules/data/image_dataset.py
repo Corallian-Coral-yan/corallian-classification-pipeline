@@ -10,6 +10,8 @@ import logging
 import matplotlib.pyplot as plt
 
 class ImageDataset(Dataset):
+    AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
+
     def __init__(self, annotations_file, img_dir, train=False, transform=None, target_transform=None, random_state=1, verbose=False, label_column="annotation"):
         self.annotations_file = annotations_file
         self.img_dir = img_dir
@@ -28,10 +30,9 @@ class ImageDataset(Dataset):
 
         # Filter out AA labels BEFORE encoding
         if label_column == "annotation":
-            AA_CLASSES_TO_IGNORE = ["AA", "TWB", "UNK", "R", "S"]
-            raw_labels = raw_labels[~raw_labels[self.label_column].isin(AA_CLASSES_TO_IGNORE)]
-            assert not any(label in AA_CLASSES_TO_IGNORE for label in raw_labels[self.label_column].values), \
-                f"One or more ignored labels ({AA_CLASSES_TO_IGNORE}) still present after filtering"
+            raw_labels = raw_labels[~raw_labels[self.label_column].isin(self.AA_CLASSES_TO_IGNORE)]
+            assert not any(label in self.AA_CLASSES_TO_IGNORE for label in raw_labels[self.label_column].values), \
+                f"One or more ignored labels ({self.AA_CLASSES_TO_IGNORE}) still present after filtering"
 
         # Encode class labels
         self.le.fit(raw_labels[self.label_column])

@@ -418,6 +418,7 @@ class ResNetASPPClassifier(nn.Module):
             self.checkpoint_folder, 
             f"Epoch{epoch_number}-Checkpoint{checkpoint_number}.pt"
         )
+        logging.info(f"Loading state_dict from checkpoint {filepath}")
         self.load_state_dict(torch.load(filepath), strict=False)
         logging.info(f"Successfully loaded state_dict from checkpoint {filepath}")
 
