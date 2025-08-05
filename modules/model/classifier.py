@@ -28,10 +28,11 @@ from modules.data.adaptive_equalization import AdaptiveEqualization
 
 
 class ResNetASPPClassifier(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, wandb_config):
         super(ResNetASPPClassifier, self).__init__()
         
         self.config = config
+        self.wandb_config = wandb_config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         logging.info(f"Running classifier on device {self.device}")
 
@@ -382,11 +383,12 @@ class ResNetASPPClassifier(nn.Module):
                 loss.backward()
                 self.optimizer.step()
                 
-                wandb.log({
-                    "epoch": epoch,
-                    "batch": i,
-                    "loss": loss.item()
-                })
+                if self.wandb_config["UseWandB"]:
+                    wandb.log({
+                        "epoch": epoch,
+                        "batch": i,
+                        "loss": loss.item()
+                    })
 
                 del images, labels, outputs
                 torch.cuda.empty_cache()
@@ -473,6 +475,8 @@ class ResNetASPPClassifier(nn.Module):
                 actual = actual.to(self.device)
                 outputs = self(images)
                 _, predicted = torch.max(outputs.data, 1)
+                probs = torch.softmax(outputs, dim=1)
+                top_probs, top_classes = torch.topk(probs, 5, dim=1)
 
                 total += actual.size(0)
                 correct += (predicted == actual).sum().item()
@@ -497,27 +501,41 @@ class ResNetASPPClassifier(nn.Module):
                             "false": "coral",
                             "true": "not-coral"
                         }
-
                     for j, (path, predicted_label, actual_label) in enumerate(zip(paths, predicted_labels, actual_labels)):
                         if model_config["LabelColumn"] == "aa_ignore":
                             actual_label = label_map.get(actual_label, actual_label)
                             predicted_label = label_map.get(predicted_label, predicted_label)
 
-                        # Copy the image to the saved predictions folder        
                         original_filename = os.path.basename(path)
                         name_only, ext = os.path.splitext(original_filename)
-                        prediction_filename = f"{name_only}__actual-{actual_label}__pred-{predicted_label}{ext}"
-                        shutil.copy(path, os.path.join(saved_predictions_folder, f"predicted-{predicted_label}", prediction_filename))
+
+                        # Include top-5 class names AND probabilities in filename
+                        top5_label_str = "_".join(
+                            f"{class_names[top_classes[j, k].item()]}:{top_probs[j, k].item():.3f}"
+                            for k in range(5)
+                        )
+
+                        prediction_filename = f"{name_only}__actual-{actual_label}__top5-{top5_label_str}{ext}"
+                        destination_path = os.path.join(saved_predictions_folder, f"predicted-{predicted_label}", prediction_filename)
+
+                        logging.info(f"Trying to copy image:\n  From: {path}\n  To:   {destination_path}")
+
+                        try:
+                            shutil.copy(path, destination_path)
+                            logging.info(f"Successfully copied: {destination_path}")
+                        except Exception as e:
+                            logging.error(f"Failed to copy {path} → {destination_path}. Error: {e}")
 
                 del images, actual, outputs
     
             accuracy = 100 * correct / total
 
-            wandb.log({
-                f"{name}_accuracy": accuracy,
-                f"{name}_eval_step": i,
-                f"{name}_current_epoch": self.current_epoch
-            })
+            if self.wandb_config["UseWandB"]:
+                wandb.log({
+                    f"{name}_accuracy": accuracy,
+                    f"{name}_eval_step": i,
+                    f"{name}_current_epoch": self.current_epoch
+                })
 
             logging.info(f'{name}_Accuracy: {accuracy:.2f}%')
 
@@ -532,11 +550,12 @@ class ResNetASPPClassifier(nn.Module):
                 logging.info(f"{name}_Recall: {recall}")
                 logging.info(f"{name}_F1_score: {f1}")
 
-                wandb.log({
-                    f"{name}_Precision": precision,
-                    f"{name}_Recall": recall,
-                    f"{name}_F1_score": f1
-                })
+                if self.wandb_config["UseWandB"]:
+                    wandb.log({
+                        f"{name}_Precision": precision,
+                        f"{name}_Recall": recall,
+                        f"{name}_F1_score": f1
+                    })
 
             if name == "valid_loader":
                 dataset = self.valid_loader.dataset
@@ -570,13 +589,16 @@ class ResNetASPPClassifier(nn.Module):
 
         # Log confusion matrix to W&B as table and artifact        
         table = wandb.Table(dataframe=df)
-        wandb.log({f"{name}_confusion_matrix_table": table})
+        if self.wandb_config["UseWandB"]:
+            wandb.log({f"{name}_confusion_matrix_table": table})
         df.to_csv(f"{name}_confusion_matrix.csv")
 
         artifact = wandb.Artifact(f"{name}-confusion-matrix", type="confusion_matrix")
         artifact.add_file(f"{name}_confusion_matrix.csv")
-        wandb.log_artifact(artifact)
-    
+
+        if self.wandb_config["UseWandB"]:
+            wandb.log_artifact(artifact)
+
     def compute_class_weights(self):
         # build the dataset just to access labels
         dataset = ImageDataset(

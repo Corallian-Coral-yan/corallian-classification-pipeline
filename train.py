@@ -32,13 +32,13 @@ def preprocess(config):
         )
         cropper.begin_cropping()
 
-def train(train_config, test_config):
+def train(train_config, test_config, wandb_config):
     if train_config["DoTraining"] or test_config["DoTesting"]:
         if train_config["model"]["NumClasses"] == 'auto':
             train_config["model"]["NumClasses"] = get_num_classes(train_config["IndexFile"], train_config["model"]["LabelColumn"])
             logging.info(f"NumClasses is 'auto': detected {train_config["model"]["NumClasses"]} classes")
 
-        classifier = ResNetASPPClassifier(train_config)
+        classifier = ResNetASPPClassifier(train_config, wandb_config)
         classifier.load_data()
         logging.info("Classifier created")
 
@@ -97,7 +97,7 @@ def get_num_classes(annotations_filepath, label_column, exclude=ImageDataset.AA_
 
 def full_train(config):
     preprocess(config["preprocessing"])
-    train(config["training"], config["testing"])
+    train(config["training"], config["testing"], config['wandb'])
 
     logging.info("Done")
 
@@ -106,13 +106,14 @@ def main():
         config = tomllib.load(f)
 
     timestamp = datetime.now().strftime("%m%d%y-%H")
-    wandb.login(key=config['wandb']['WANDB_API_KEY'], relogin=config['wandb']['relogin'])
-    wandb.init(
-        entity=config['wandb']['entity'],
-        project=config['wandb']['project'], 
-        name = f"{config['wandb']['runname']}-{timestamp}", # Set run name
-        config=config, # Set config file
-    )
+    if(config['wandb']['UseWandB']):
+        wandb.login(key=config['wandb']['WANDB_API_KEY'], relogin=config['wandb']['relogin'])
+        wandb.init(
+            entity=config['wandb']['entity'],
+            project=config['wandb']['project'], 
+            name = f"{config['wandb']['runname']}-{timestamp}", # Set run name
+            config=config, # Set config file
+        )
     logging_config = config["logging"]
 
     logging.basicConfig(
