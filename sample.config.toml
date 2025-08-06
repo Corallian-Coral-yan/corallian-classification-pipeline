@@ -79,6 +79,7 @@ UseLogFile = false
 LogFile = "C:/Users/Justin/Desktop/Projects/DLSU/thesis/corallian-full-pipeline/pipeline.log"
 
 [wandb]
+UseWandb = false
 runname = "Justin"                               # Set this to your name
 entity = "jace_dimalanta-de-la-salle-university" # Set this to your team name
 project = "corallian-pipeline"                   # Project name
