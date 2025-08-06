@@ -25,7 +25,7 @@ CheckpointsPerEpoch = 10
 LoadCheckpoint = false
 StartEpoch = 1
 StartCheckpoint = 1
-ReloadCheckpointOnECCError = true
+ReloadCheckpointOnECCError = false
 MaxRetriesOnECCError = "none"   # "none" or any integer are valid values, "none" means retry indefinitely
 
 
